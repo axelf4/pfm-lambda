@@ -1,4 +1,4 @@
-open import Agda.Builtin.Sigma using (Σ; snd) renaming (_,_ to _,,_)
+open import Agda.Builtin.Sigma using (Σ; snd) renaming (_,_ to infix 20 _,_)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 open import Data.Empty using (⊥)
 open import Data.Unit using (⊤; tt)
@@ -26,9 +26,6 @@ data Ctx : Set where
   _,_ : (Γ : Ctx) -> (A : Ty) -> Ctx
   _,🔓 : (Γ : Ctx) -> Ctx
 
-infixl 40 _,_
-infix 40 _,🔓
-
 ←🔓_ : Ctx -> Ctx
 ←🔓 · = ·
 ←🔓 (x , A) = ←🔓 x
@@ -38,9 +35,6 @@ infix 40 _,🔓
 🔓← · = ·
 🔓← (x , A) = 🔓← x
 🔓← (x ,🔓) = x ,🔓
-
-
-infix 30 ←🔓_ -- TODO
 
 -- The type A can be found in the context at index n.
 data Get (A : Ty) : Ctx -> ℕ -> Set where
@@ -89,6 +83,8 @@ data _⊢_::_ : Ctx -> Tm -> Ty -> Set where
     -> LFExt (Γ ,🔓) Γ'
     -> Γ' ⊢ unbox t :: A
 
+infix 10 _⊢_::_
+
 -- Weakening relation.
 --
 -- For Γ ⊆ Δ, Δ is weaker than Γ since it has additional assumptions.
@@ -97,6 +93,8 @@ data _⊆_ : Ctx -> Ctx -> Set where
   push : ∀ {A Γ Δ} -> Γ ⊆ Δ -> Γ ⊆ Δ , A
   lift : ∀ {A Γ Δ} -> Γ ⊆ Δ -> Γ , A ⊆ Δ , A
   lift🔓 : ∀ {Γ Δ} -> Γ ⊆ Δ -> Γ ,🔓 ⊆ Δ ,🔓
+
+infix 10 _⊆_
 
 idWk : {Γ : Ctx} -> Γ ⊆ Γ
 idWk {·} = base
@@ -115,22 +113,22 @@ wkLFExt (lift🔓 w) e = nil
 -- Variable weakening
 wk : ∀ {Γ Δ t A} -> (w : Γ ⊆ Δ)
   -> Γ ⊢ t :: A -> Σ Tm λ t' -> Δ ⊢ t' :: A
-wk w (var x) = let m ,, y = go w x in var m ,, var y
+wk w (var x) = let m , y = go w x in var m , var y
   where
     go : ∀ {Γ Δ A n} -> (w : Γ ⊆ Δ) -> Get A Γ n -> Σ ℕ (Get A Δ)
-    go {n = n} base x = n ,, x
-    go (push w) x = let m ,, y = go w x in suc m ,, suc y
-    go (lift w) zero = 0 ,, zero
-    go (lift w) (suc x) = let m ,, y = go w x in suc m ,, suc y
-wk w (abs t) = let t' ,, x = wk (lift w) t in abs t' ,, abs x
+    go {n = n} base x = n , x
+    go (push w) x = let m , y = go w x in suc m , suc y
+    go (lift w) zero = 0 , zero
+    go (lift w) (suc x) = let m , y = go w x in suc m , suc y
+wk w (abs t) = let t' , x = wk (lift w) t in abs t' , abs x
 wk w (app t s) = let
-  t' ,, x = wk w t
-  s' ,, y = wk w s
-  in app t' s' ,, app x y
-wk w (box t) = let t' ,, x = wk (lift🔓 w) t in box t' ,, box x
+  t' , x = wk w t
+  s' , y = wk w s
+  in app t' s' , app x y
+wk w (box t) = let t' , x = wk (lift🔓 w) t in box t' , box x
 wk {Δ = Δ} {A = A} w (unbox t lfext) = let
-  t' ,, x = wk (dropLFExt lfext w) t
-  in unbox t' ,, unbox x (wkLFExt w lfext)
+  t' , x = wk (dropLFExt lfext w) t
+  in unbox t' , unbox x (wkLFExt w lfext)
   where
     -- Drop the part of the weakening that pertains to the lock-free extension.
     dropLFExt : ∀ {Γ Γ' Δ} -> LFExt (Γ ,🔓) Γ' -> Γ' ⊆ Δ -> Γ ⊆ ←🔓 Δ
@@ -165,13 +163,13 @@ data Sub : Ctx -> Ctx -> Set where
 
 lift-sub : {Γ Δ : Ctx} {A : Ty} -> Sub Γ Δ -> Sub (Γ , A) (Δ , A)
 -- -- lift-sub σ = wkSub (push idWk) (keep σ)
--- -- lift-sub base = sub base (λ x -> var 0 ,, {!var x!})
--- lift-sub base = sub base λ { zero → var 0 ,, var zero }
+-- -- lift-sub base = sub base (λ x -> var 0 , {!var x!})
+-- lift-sub base = sub base λ { zero → var 0 , var zero }
 -- lift-sub (sub σ f) = sub σ λ
---   { zero → var 0 ,, var zero
+--   { zero → var 0 , var zero
 --   ; (suc x) → wk (push idWk) (snd (f x))
 --   }
--- lift-sub x@(lock σ) = sub x λ { zero → var 0 ,, var zero }
+-- lift-sub x@(lock σ) = sub x λ { zero → var 0 , var zero }
 lift-sub σ = sub (wk-sub σ) (var zero)
   where
     wk-sub : ∀ {Γ Δ A} -> Sub Γ Δ -> Sub Γ (Δ , A)
@@ -186,14 +184,14 @@ id-sub {Γ ,🔓} = lock id-sub nil
 
 subst : {Γ Δ : Ctx} {A : Ty} {t : Tm}
   -> Sub Γ Δ -> Γ ⊢ t :: A -> Σ Tm λ t' -> Δ ⊢ t' :: A
-subst σ (abs x) = let t ,, y = subst (lift-sub σ) x in abs t ,, abs y
+subst σ (abs x) = let t , y = subst (lift-sub σ) x in abs t , abs y
 subst σ (app x y) = let
-  t ,, x' = subst σ x
-  s ,, y' = subst σ y
-  in app t s ,, app x' y'
-subst σ (box x) = let t ,, y = subst (lock σ nil) x in box t ,, box y
-subst σ (unbox x ext) = let t ,, y = subst (rewind-sub ext σ) x
-  in unbox t ,, unbox y (rewind-sub-ext ext σ)
+  t , x' = subst σ x
+  s , y' = subst σ y
+  in app t s , app x' y'
+subst σ (box x) = let t , y = subst (lock σ nil) x in box t , box y
+subst σ (unbox x ext) = let t , y = subst (rewind-sub ext σ) x
+  in unbox t , unbox y (rewind-sub-ext ext σ)
   where
     -- With the pair of contexts (Γ', Δ) and an extension from Γ to Γ',
     -- rewind Δ back for as many locks as there are in the extension.
@@ -209,7 +207,7 @@ subst σ (unbox x ext) = let t ,, y = subst (rewind-sub ext σ) x
     rewind-sub : {Γ Γ' Δ : Ctx} -> (e : LFExt (Γ ,🔓) Γ') -> (σ : Sub Γ' Δ) -> Sub Γ (rewind-sub-ty e σ)
     rewind-sub nil (lock σ ext) = σ
     rewind-sub (snoc lfext) (sub σ x) = rewind-sub lfext σ
-subst (sub {t = t'} σ x) (var zero) = t' ,, x
+subst (sub {t = t'} σ x) (var zero) = t' , x
 subst (sub σ x) (var (suc g)) = subst σ (var g)
 
 -- Applies unit substitution.
@@ -251,6 +249,8 @@ mutual
   -- Normal forms
   data _⊢nf_ : Ctx -> Ty -> Set where
     abs : {Γ : Ctx} {A B : Ty} -> Γ , A ⊢nf B -> Γ ⊢nf A ⟶ B
+
+infix 10 _⊢nf_ _⊢nt_
 
 -- -- Normalization function
 -- nf : Γ ⊢ t :: A -> Γ ⊢nf A
