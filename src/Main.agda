@@ -85,28 +85,29 @@ data _⊢_::_ : Ctx -> Tm -> Ty -> Set where
 
 infix 10 _⊢_::_
 
--- Weakening relation.
+-- Order-preserving embedding (OPE).
 --
--- For Γ ⊆ Δ, Δ is weaker than Γ since it has additional assumptions.
+-- For Γ ⊆ Δ, Δ is weaker than Γ since it has additional assumptions,
+-- i.e. Γ is a subsequence of Δ.
 data _⊆_ : Ctx -> Ctx -> Set where
   base : · ⊆ ·
-  push : ∀ {A Γ Δ} -> Γ ⊆ Δ -> Γ ⊆ Δ , A
+  weak : ∀ {A Γ Δ} -> Γ ⊆ Δ -> Γ ⊆ Δ , A
   lift : ∀ {A Γ Δ} -> Γ ⊆ Δ -> Γ , A ⊆ Δ , A
   lift🔓 : ∀ {Γ Δ} -> Γ ⊆ Δ -> Γ ,🔓 ⊆ Δ ,🔓
 
 infix 10 _⊆_
 
-idWk : {Γ : Ctx} -> Γ ⊆ Γ
-idWk {·} = base
-idWk {Γ , A} = lift idWk
-idWk {Γ ,🔓} = lift🔓 idWk
+⊆-id : {Γ : Ctx} -> Γ ⊆ Γ
+⊆-id {·} = base
+⊆-id {Γ , A} = lift ⊆-id
+⊆-id {Γ ,🔓} = lift🔓 ⊆-id
 
-lfext-to-wk : {Γ Γ' : Ctx} -> LFExt Γ Γ' -> Γ ⊆ Γ'
-lfext-to-wk nil = idWk
-lfext-to-wk (snoc x) = push (lfext-to-wk x)
+lfext-to-⊆ : {Γ Γ' : Ctx} -> LFExt Γ Γ' -> Γ ⊆ Γ'
+lfext-to-⊆ nil = ⊆-id
+lfext-to-⊆ (snoc x) = weak (lfext-to-⊆ x)
 
 wkLFExt : {ΓL Γ Δ : Ctx} -> Γ ⊆ Δ -> LFExt (ΓL ,🔓) Γ -> LFExt ((←🔓 Δ) ,🔓) Δ
-wkLFExt (push w) e = snoc (wkLFExt w e)
+wkLFExt (weak w) e = snoc (wkLFExt w e)
 wkLFExt (lift w) (snoc e) = snoc (wkLFExt w e)
 wkLFExt (lift🔓 w) e = nil
 
@@ -117,7 +118,7 @@ wk w (var x) = let m , y = go w x in var m , var y
   where
     go : ∀ {Γ Δ A n} -> (w : Γ ⊆ Δ) -> Get A Γ n -> Σ ℕ (Get A Δ)
     go {n = n} base x = n , x
-    go (push w) x = let m , y = go w x in suc m , suc y
+    go (weak w) x = let m , y = go w x in suc m , suc y
     go (lift w) zero = 0 , zero
     go (lift w) (suc x) = let m , y = go w x in suc m , suc y
 wk w (abs t) = let t' , x = wk (lift w) t in abs t' , abs x
@@ -132,13 +133,13 @@ wk {Δ = Δ} {A = A} w (unbox t lfext) = let
   where
     -- Drop the part of the weakening that pertains to the lock-free extension.
     dropLFExt : ∀ {Γ Γ' Δ} -> LFExt (Γ ,🔓) Γ' -> Γ' ⊆ Δ -> Γ ⊆ ←🔓 Δ
-    dropLFExt lfext (push w) = dropLFExt lfext w
+    dropLFExt lfext (weak w) = dropLFExt lfext w
     dropLFExt (snoc lfext) (lift w) = dropLFExt lfext w
     dropLFExt lfext (lift🔓 w) rewrite nil-lfExt-eq lfext = w
 
 -- -- TODO Naming
 -- slice-wk-left-of-🔓 : {Γ Γ' Γ'' : Ctx} -> LFExt (Γ' ,🔓) Γ -> Γ ⊆ Γ'' -> Γ' ⊆ ←🔓 Γ''
--- slice-wk-left-of-🔓 lfext (push w) = slice-wk-left-of-🔓 lfext w
+-- slice-wk-left-of-🔓 lfext (weak w) = slice-wk-left-of-🔓 lfext w
 -- slice-wk-left-of-🔓 (snoc lfext) (lift w) = slice-wk-left-of-🔓 lfext w
 -- slice-wk-left-of-🔓 nil (lift🔓 w) = w
 
@@ -162,19 +163,19 @@ data Sub : Ctx -> Ctx -> Set where
 -- -- wkSub w (lock σ ext) = lock (wkSub (slice-wk-left-of-🔓 ext w) σ) (wkLFExt w ext)
 
 lift-sub : {Γ Δ : Ctx} {A : Ty} -> Sub Γ Δ -> Sub (Γ , A) (Δ , A)
--- -- lift-sub σ = wkSub (push idWk) (keep σ)
+-- -- lift-sub σ = wkSub (weak ⊆-id) (keep σ)
 -- -- lift-sub base = sub base (λ x -> var 0 , {!var x!})
 -- lift-sub base = sub base λ { zero → var 0 , var zero }
 -- lift-sub (sub σ f) = sub σ λ
 --   { zero → var 0 , var zero
---   ; (suc x) → wk (push idWk) (snd (f x))
+--   ; (suc x) → wk (weak ⊆-id) (snd (f x))
 --   }
 -- lift-sub x@(lock σ) = sub x λ { zero → var 0 , var zero }
 lift-sub σ = sub (wk-sub σ) (var zero)
   where
     wk-sub : ∀ {Γ Δ A} -> Sub Γ Δ -> Sub Γ (Δ , A)
     wk-sub base = base
-    wk-sub (sub s x) = sub (wk-sub s) (snd (wk (push idWk) x))
+    wk-sub (sub s x) = sub (wk-sub s) (snd (wk (weak ⊆-id) x))
     wk-sub (lock s ext) = lock s (snoc ext)
 
 id-sub : {Γ : Ctx} -> Sub Γ Γ
@@ -230,10 +231,10 @@ data _≅_ : {Γ : Ctx} {t s : Tm} {A : Ty}
   β-red : ∀ {Γ t A B} -> (x : Γ , A ⊢ t :: B) -> (y : Γ ⊢ t :: A)
     -> app (abs x) y ≅ snd (x [ y ])
   η-conv : ∀ {Γ t A B} {x : Γ ⊢ t :: A ⟶ B}
-    -> x ≅ abs (app (snd (wk (push idWk) x)) (var zero))
+    -> x ≅ abs (app (snd (wk (weak ⊆-id) x)) (var zero))
 
   □-red : ∀ {Γ Γ' t A} {x : Γ ,🔓 ⊢ t :: A} {ext : LFExt (Γ ,🔓) Γ'}
-    -> unbox (box x) ext ≅ snd (wk (lfext-to-wk ext) x)
+    -> unbox (box x) ext ≅ snd (wk (lfext-to-⊆ ext) x)
   □-conv : ∀ {Γ t A} -> {x : Γ ⊢ t :: □ A}
     -> x ≅ box (unbox x nil)
 
@@ -242,7 +243,7 @@ data _≅_ : {Γ : Ctx} {t s : Tm} {A : Ty}
     -> x ≅ y -> abs x ≅ abs y
 
 mutual
-  -- Neutral forms
+  -- Neutral terms
   data _⊢nt_ : Ctx -> Ty -> Set where
     var : {Γ : Ctx} {A : Ty} -> (n : ℕ) -> Get A Γ n -> Γ ⊢nt A
     app : {Γ : Ctx} {A B : Ty} -> Γ ⊢nt A ⟶ B -> Γ ⊢nf A -> Γ ⊢nt B
