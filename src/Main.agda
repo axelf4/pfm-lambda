@@ -1,5 +1,7 @@
+{-# OPTIONS --without-K #-}
+
 open import Agda.Builtin.Sigma using (Σ; snd) renaming (_,_ to infix 20 _,_)
-open import Relation.Binary.PropositionalEquality using (_≡_; refl)
+open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl)
 open import Data.Empty using (⊥)
 open import Data.Unit using (⊤; tt)
 open import Data.Product using (_×_)
@@ -13,6 +15,7 @@ data Ty : Set where
 infixr 30 _⟶_
 infix 30 □_
 
+-- Preterms
 data Tm : Set where
   var : ℕ -> Tm
   abs : Tm -> Tm
@@ -52,9 +55,6 @@ data Ext (🔓? : Set) (Γ : Ctx) : Ctx -> Set where
   snoc🔓 : {Γ' : Ctx} -> {🔓?} -> Ext 🔓? Γ Γ' -> Ext 🔓? Γ (Γ' ,🔓)
 
 LFExt = Ext ⊥
-
-nil-lfExt-eq : {Γ Γ' : Ctx} -> LFExt (Γ ,🔓) (Γ' ,🔓) -> Γ ≡ Γ'
-nil-lfExt-eq nil = refl
 
 ←🔓-of-lfExt-is-base : {Γ Γ' : Ctx} -> LFExt (Γ ,🔓) Γ' -> ←🔓 Γ' ≡ Γ
 ←🔓-of-lfExt-is-base nil = refl
@@ -102,6 +102,20 @@ infix 10 _⊆_
 ⊆-id {Γ , A} = lift ⊆-id
 ⊆-id {Γ ,🔓} = lift🔓 ⊆-id
 
+-- Composition of weakenings (also transitivity proof).
+_●_ : {Γ Γ' Γ'' : Ctx} -> Γ ⊆ Γ' -> Γ' ⊆ Γ'' -> Γ ⊆ Γ''
+x ● base = x
+x ● (weak y) = weak (x ● y)
+(weak x) ● (lift y) = weak (x ● y)
+(lift x) ● (lift y) = lift (x ● y)
+(lift🔓 x) ● (lift🔓 y) = lift🔓 (x ● y)
+
+-- Drop the part of the OPE that pertains to the context extension
+rewind-⊆ : {Γ Γ' Γ'' : Ctx} -> LFExt (Γ' ,🔓) Γ -> Γ ⊆ Γ'' -> Γ' ⊆ ←🔓 Γ''
+rewind-⊆ lfext (weak w) = rewind-⊆ lfext w
+rewind-⊆ (snoc lfext) (lift w) = rewind-⊆ lfext w
+rewind-⊆ nil (lift🔓 w) = w
+
 lfext-to-⊆ : {Γ Γ' : Ctx} -> LFExt Γ Γ' -> Γ ⊆ Γ'
 lfext-to-⊆ nil = ⊆-id
 lfext-to-⊆ (snoc x) = weak (lfext-to-⊆ x)
@@ -111,16 +125,16 @@ wkLFExt (weak w) e = snoc (wkLFExt w e)
 wkLFExt (lift w) (snoc e) = snoc (wkLFExt w e)
 wkLFExt (lift🔓 w) e = nil
 
+wk-var : ∀ {Γ Δ A n} -> (w : Γ ⊆ Δ) -> n :: A ∈ Γ -> Σ ℕ (_:: A ∈ Δ)
+wk-var {n = n} base x = n , x
+wk-var (weak w) x = let m , y = wk-var w x in suc m , suc y
+wk-var (lift w) zero = 0 , zero
+wk-var (lift w) (suc x) = let m , y = wk-var w x in suc m , suc y
+
 -- Variable weakening
 wk : ∀ {Γ Δ t A} -> (w : Γ ⊆ Δ)
   -> Γ ⊢ t :: A -> Σ Tm λ t' -> Δ ⊢ t' :: A
-wk w (var x) = let m , y = go w x in var m , var y
-  where
-    go : ∀ {Γ Δ A n} -> (w : Γ ⊆ Δ) -> Get A Γ n -> Σ ℕ (Get A Δ)
-    go {n = n} base x = n , x
-    go (weak w) x = let m , y = go w x in suc m , suc y
-    go (lift w) zero = 0 , zero
-    go (lift w) (suc x) = let m , y = go w x in suc m , suc y
+wk w (var x) = let m , y = wk-var w x in var m , var y
 wk w (abs t) = let t' , x = wk (lift w) t in abs t' , abs x
 wk w (app t s) = let
   t' , x = wk w t
@@ -128,28 +142,11 @@ wk w (app t s) = let
   in app t' s' , app x y
 wk w (box t) = let t' , x = wk (lift🔓 w) t in box t' , box x
 wk {Δ = Δ} {A = A} w (unbox t lfext) = let
-  t' , x = wk (dropLFExt lfext w) t
+  t' , x = wk (rewind-⊆ lfext w) t
   in unbox t' , unbox x (wkLFExt w lfext)
-  where
-    -- Drop the part of the weakening that pertains to the lock-free extension.
-    dropLFExt : ∀ {Γ Γ' Δ} -> LFExt (Γ ,🔓) Γ' -> Γ' ⊆ Δ -> Γ ⊆ ←🔓 Δ
-    dropLFExt lfext (weak w) = dropLFExt lfext w
-    dropLFExt (snoc lfext) (lift w) = dropLFExt lfext w
-    dropLFExt lfext (lift🔓 w) rewrite nil-lfExt-eq lfext = w
-
--- -- TODO Naming
--- slice-wk-left-of-🔓 : {Γ Γ' Γ'' : Ctx} -> LFExt (Γ' ,🔓) Γ -> Γ ⊆ Γ'' -> Γ' ⊆ ←🔓 Γ''
--- slice-wk-left-of-🔓 lfext (weak w) = slice-wk-left-of-🔓 lfext w
--- slice-wk-left-of-🔓 (snoc lfext) (lift w) = slice-wk-left-of-🔓 lfext w
--- slice-wk-left-of-🔓 nil (lift🔓 w) = w
 
 -- Substitution from variables in context Γ to terms in context Δ.
 data Sub : Ctx -> Ctx -> Set where
-  -- base : Sub · ·
-  -- sub : {Γ Δ : Ctx} -> (σ : Sub (🔓← Γ) (🔓← Δ))
-  --   -> (∀ {A n} -> n :: A ∈ Γ -> Σ Tm λ t -> Δ ⊢ t :: A)
-  --   -> Sub Γ Δ
-  -- lock : {Γ Δ : Ctx} -> (σ : Sub Γ Δ) -> Sub (Γ ,🔓) (Δ ,🔓)
   base : {Δ : Ctx} -> Sub · Δ
   sub : {Γ Δ : Ctx} {A : Ty} {t : Tm}
     -> (σ : Sub Γ Δ)
@@ -157,26 +154,13 @@ data Sub : Ctx -> Ctx -> Set where
     -> Sub (Γ , A) Δ
   lock : {Γ Δ Δ' : Ctx} -> (σ : Sub Γ Δ) -> LFExt (Δ ,🔓) Δ' -> Sub (Γ ,🔓) Δ'
 
--- wkSub : {Γ Δ Δ' : Ctx} -> Δ ⊆ Δ' -> Sub Γ Δ -> Sub Γ Δ'
--- wkSub w base = base
--- wkSub w (sub σ f) = sub (wkSub w σ) λ x -> wk w (snd (f x))
--- -- wkSub w (lock σ ext) = lock (wkSub (slice-wk-left-of-🔓 ext w) σ) (wkLFExt w ext)
+wkSub : {Γ Δ Δ' : Ctx} -> Δ ⊆ Δ' -> Sub Γ Δ -> Sub Γ Δ'
+wkSub w base = base
+wkSub w (sub σ x) = sub (wkSub w σ) (snd (wk w x))
+wkSub w (lock σ ext) = lock (wkSub (rewind-⊆ ext w) σ) (wkLFExt w ext)
 
 lift-sub : {Γ Δ : Ctx} {A : Ty} -> Sub Γ Δ -> Sub (Γ , A) (Δ , A)
--- -- lift-sub σ = wkSub (weak ⊆-id) (keep σ)
--- -- lift-sub base = sub base (λ x -> var 0 , {!var x!})
--- lift-sub base = sub base λ { zero → var 0 , var zero }
--- lift-sub (sub σ f) = sub σ λ
---   { zero → var 0 , var zero
---   ; (suc x) → wk (weak ⊆-id) (snd (f x))
---   }
--- lift-sub x@(lock σ) = sub x λ { zero → var 0 , var zero }
-lift-sub σ = sub (wk-sub σ) (var zero)
-  where
-    wk-sub : ∀ {Γ Δ A} -> Sub Γ Δ -> Sub Γ (Δ , A)
-    wk-sub base = base
-    wk-sub (sub s x) = sub (wk-sub s) (snd (wk (weak ⊆-id) x))
-    wk-sub (lock s ext) = lock s (snoc ext)
+lift-sub σ = sub (wkSub (weak ⊆-id) σ) (var zero)
 
 id-sub : {Γ : Ctx} -> Sub Γ Γ
 id-sub {·} = base
@@ -228,9 +212,9 @@ data _≅_ : {Γ : Ctx} {t s : Tm} {A : Ty}
   ≅-trans : ∀ {Γ t s u A} {x : Γ ⊢ t :: A} {y : Γ ⊢ s :: A} {z : Γ ⊢ u :: A}
     -> x ≅ y -> y ≅ z -> x ≅ z
 
-  β-red : ∀ {Γ t A B} -> (x : Γ , A ⊢ t :: B) -> (y : Γ ⊢ t :: A)
+  β : ∀ {Γ t A B} -> (x : Γ , A ⊢ t :: B) -> (y : Γ ⊢ t :: A)
     -> app (abs x) y ≅ snd (x [ y ])
-  η-conv : ∀ {Γ t A B} {x : Γ ⊢ t :: A ⟶ B}
+  η : ∀ {Γ t A B} {x : Γ ⊢ t :: A ⟶ B}
     -> x ≅ abs (app (snd (wk (weak ⊆-id) x)) (var zero))
 
   □-red : ∀ {Γ Γ' t A} {x : Γ ,🔓 ⊢ t :: A} {ext : LFExt (Γ ,🔓) Γ'}
@@ -243,15 +227,98 @@ data _≅_ : {Γ : Ctx} {t s : Tm} {A : Ty}
     -> x ≅ y -> abs x ≅ abs y
 
 mutual
-  -- Neutral terms
-  data _⊢nt_ : Ctx -> Ty -> Set where
-    var : {Γ : Ctx} {A : Ty} -> (n : ℕ) -> Get A Γ n -> Γ ⊢nt A
-    app : {Γ : Ctx} {A B : Ty} -> Γ ⊢nt A ⟶ B -> Γ ⊢nf A -> Γ ⊢nt B
   -- Normal forms
-  data _⊢nf_ : Ctx -> Ty -> Set where
-    abs : {Γ : Ctx} {A B : Ty} -> Γ , A ⊢nf B -> Γ ⊢nf A ⟶ B
+  data _⊢nf_ (Γ : Ctx) : Ty -> Set where
+    nt : {A : Ty} -> Γ ⊢nt A -> Γ ⊢nf A
+    abs : {A B : Ty} -> Γ , A ⊢nf B -> Γ ⊢nf A ⟶ B
+    box : {A : Ty} -> Γ ,🔓 ⊢nf A -> Γ ⊢nf □ A
+  -- Neutral terms
+  data _⊢nt_ (Γ : Ctx) : Ty -> Set where
+    var : {A : Ty} -> {n : ℕ} -> Get A Γ n -> Γ ⊢nt A
+    app : {A B : Ty} -> Γ ⊢nt A ⟶ B -> Γ ⊢nf A -> Γ ⊢nt B
+    unbox : {A : Ty} {Γ' : Ctx} -> Γ' ⊢nt □ A -> LFExt (Γ' ,🔓) Γ -> Γ ⊢nt A
 
 infix 10 _⊢nf_ _⊢nt_
 
--- -- Normalization function
--- nf : Γ ⊢ t :: A -> Γ ⊢nf A
+wk-nf : {Γ Δ : Ctx} {A : Ty} -> Γ ⊆ Δ -> Γ ⊢nf A -> Δ ⊢nf A
+wk-nt : {Γ Δ : Ctx} {A : Ty} -> Γ ⊆ Δ -> Γ ⊢nt A -> Δ ⊢nt A
+wk-nf w (nt x) = nt (wk-nt w x)
+wk-nf w (abs x) = abs (wk-nf (lift w) x)
+wk-nf w (box x) = box (wk-nf (lift🔓 w) x)
+wk-nt w (var x) = var (snd (wk-var w x))
+wk-nt w (app x y) = app (wk-nt w x) (wk-nf w y)
+wk-nt w (unbox x e) = unbox (wk-nt (rewind-⊆ e w) x) (wkLFExt w e)
+
+-- Natural transformation between presheafs
+_→̇_ : (Ctx → Set) → (Ctx → Set) → Set
+_→̇_ A B = {Δ : Ctx} → A Δ → B Δ
+
+record Box' (A' : Ctx -> Set) (Γ : Ctx) : Set where
+  constructor box'
+  field
+    unbox' : A' (Γ ,🔓)
+
+-- Interpret a type to a presheaf
+⟦_⟧ty : Ty -> Ctx -> Set
+⟦ ι ⟧ty = _⊢nf ι
+⟦ A ⟶ B ⟧ty Γ = {Δ : Ctx} -> Γ ⊆ Δ -> ⟦ A ⟧ty Δ -> ⟦ B ⟧ty Δ
+⟦ □ A ⟧ty Γ = Box' ⟦ A ⟧ty Γ
+
+-- Interpret context to a presheaf
+data Env : (Γ Δ : Ctx) -> Set where
+  · : {Δ : Ctx} -> Env · Δ
+  _,_ : {Γ Δ : Ctx} {A : Ty} -> Env Γ Δ -> ⟦ A ⟧ty Δ -> Env (Γ , A) Δ
+  lock : {Γ Δ Δ' : Ctx} -> Env Γ Δ -> LFExt (Δ ,🔓) Δ' -> Env (Γ ,🔓) Δ'
+
+⟦_⟧ctx = Env
+
+wk-ty' : {A : Ty} {Γ Δ : Ctx} -> Γ ⊆ Δ -> ⟦ A ⟧ty Γ -> ⟦ A ⟧ty Δ
+wk-ty' {ι} w A' = wk-nf w A'
+wk-ty' {A ⟶ B} w A⟶B' w2 A' = A⟶B' (w ● w2) A'
+wk-ty' {□ A} w (box' A') = box' (wk-ty' {A} (lift🔓 w) A')
+
+wk-env : {Γ Δ Δ' : Ctx} -> Δ ⊆ Δ' -> ⟦ Γ ⟧ctx Δ -> ⟦ Γ ⟧ctx Δ'
+wk-env {·} w · = ·
+wk-env {Γ , A} w (Γ' , A') = wk-env {Γ} w Γ' , wk-ty' {A} w A'
+wk-env {Γ ,🔓} w (lock Γ' e) = lock (wk-env (rewind-⊆ e w) Γ') (wkLFExt w e)
+
+-- Interpret terms-in-contexts as natural transformations
+⟦_⟧tm : {Γ : Ctx} {t : Tm} {A : Ty} -> Γ ⊢ t :: A -> {Δ : Ctx} -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
+⟦ var A∈Γ ⟧tm Γ' = lookup A∈Γ Γ'
+  where
+    lookup : ∀ {A Γ n} {Δ : Ctx} -> Get A Γ n -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
+    lookup zero (_ , A') = A'
+    lookup (suc x) (Γ' , _) = lookup x Γ'
+⟦ abs x ⟧tm Γ' e y' = ⟦ x ⟧tm (wk-env e Γ' , y')
+⟦ app x y ⟧tm Γ' = ⟦ x ⟧tm Γ' ⊆-id (⟦ y ⟧tm Γ')
+⟦ box x ⟧tm Γ' = box' (⟦ x ⟧tm (lock Γ' nil))
+⟦_⟧tm {A = A} (unbox x e) Γ' = let box' y' = ⟦ x ⟧tm (rewind-env e Γ')
+  in wk-ty' {A} (lfext-to-⊆ (←🔓-lfext e Γ')) y'
+  where
+    ←🔓-lfext : {Γ Γ' Δ : Ctx} -> LFExt (Γ ,🔓) Γ' -> Env Γ' Δ -> LFExt ((←🔓 Δ) ,🔓) Δ
+    ←🔓-lfext (snoc e) (env , _) = ←🔓-lfext e env
+    ←🔓-lfext nil (lock env nil) = nil
+    ←🔓-lfext nil (lock env (snoc lfext)) = snoc (←🔓-lfext nil (lock env lfext))
+
+    rewind-env : {Γ Γ' Δ : Ctx} -> LFExt (Γ ,🔓) Γ' -> Env Γ' Δ -> Env Γ (←🔓 Δ)
+    rewind-env (snoc e) (env , _) = rewind-env e env
+    rewind-env nil (lock env lfext) rewrite ←🔓-of-lfExt-is-base lfext = env
+
+reify : {A : Ty} {Γ : Ctx} -> ⟦ A ⟧ty Γ -> Γ ⊢nf A
+reflect : {A : Ty} {Γ : Ctx} -> Γ ⊢nt A -> ⟦ A ⟧ty Γ
+reify {ι} A' = A'
+reify {A ⟶ B} A⟶B' = abs (reify (A⟶B' (weak ⊆-id) (reflect {A} (var zero))))
+reify {□ A} (box' A') = box (reify A')
+reflect {ι} x = nt x
+reflect {A ⟶ B} x e A' = reflect (app (wk-nt e x) (reify A'))
+reflect {□ A} x = box' (reflect (unbox x nil))
+
+-- Normalization function
+nf : {Γ : Ctx} {t : Tm} {A : Ty} -> Γ ⊢ t :: A -> Γ ⊢nf A
+nf x = reify (⟦ x ⟧tm Γ')
+  where
+    -- Initial environment consisting of all neutrals
+    Γ' : {Γ : Ctx} -> ⟦ Γ ⟧ctx Γ
+    Γ' {·} = ·
+    Γ' {Γ , A} = wk-env (weak ⊆-id) Γ' , reflect {A} (var zero)
+    Γ' {Γ ,🔓} = lock Γ' nil
