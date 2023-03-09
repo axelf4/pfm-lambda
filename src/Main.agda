@@ -129,3 +129,97 @@ data _≅_ : {Γ : Ctx} {t s : Tm} {A : Ty}
     -> x ≅ y -> box x ≅ box y
   cong-unbox : ∀ {Γ Δ t t' A} {x : Δ ⊢ t :: □ A} {y : Δ ⊢ t' :: □ A} {m : Δ ◁ Γ}
     -> x ≅ y -> unbox x m ≅ unbox y m
+
+mutual
+  -- Normal forms
+  data _⊢nf_ (Γ : Ctx) : Ty -> Set where
+    nt : {A : Ty} -> Γ ⊢nt A -> Γ ⊢nf A
+    abs : {A B : Ty} -> Γ , A ⊢nf B -> Γ ⊢nf A ⟶ B
+    box : {A : Ty} -> Γ ,🔓 ⊢nf A -> Γ ⊢nf □ A
+  -- Neutral terms
+  data _⊢nt_ (Γ : Ctx) : Ty -> Set where
+    var : {A : Ty} -> {n : ℕ} -> Get A Γ n -> Γ ⊢nt A
+    app : {A B : Ty} -> Γ ⊢nt A ⟶ B -> Γ ⊢nf A -> Γ ⊢nt B
+    unbox : {A : Ty} {Γ' : Ctx} -> Γ' ⊢nt □ A -> Γ' ◁ Γ -> Γ ⊢nt A
+
+infix 10 _⊢nf_ _⊢nt_
+
+-- Quotation of normal forms/neutrals back into terms
+⌜_⌝nf : {Γ : Ctx} {A : Ty} -> Γ ⊢nf A -> Σ Tm (Γ ⊢_:: A)
+⌜_⌝nt : {Γ : Ctx} {A : Ty} -> Γ ⊢nt A -> Σ Tm (Γ ⊢_:: A)
+⌜ nt x ⌝nf = ⌜ x ⌝nt
+⌜ abs x ⌝nf = _ , abs (snd ⌜ x ⌝nf)
+⌜ box x ⌝nf = _ , box (snd ⌜ x ⌝nf)
+⌜ var x ⌝nt = _ , var x
+⌜ app x y ⌝nt = _ , app (snd ⌜ x ⌝nt) (snd ⌜ y ⌝nf)
+⌜ unbox x m ⌝nt = _ , unbox (snd ⌜ x ⌝nt) m
+
+wk-nf : {Γ Δ : Ctx} {A : Ty} -> Γ ⊆ Δ -> Γ ⊢nf A -> Δ ⊢nf A
+wk-nt : {Γ Δ : Ctx} {A : Ty} -> Γ ⊆ Δ -> Γ ⊢nt A -> Δ ⊢nt A
+wk-nf w (nt x) = nt (wk-nt w x)
+wk-nf w (abs x) = abs (wk-nf (lift w) x)
+wk-nf w (box x) = box (wk-nf (lift🔓 w) x)
+wk-nt w (var x) = var (snd (wkVar w x))
+wk-nt w (app x y) = app (wk-nt w x) (wk-nf w y)
+wk-nt w (unbox x m) = let _ , (m' , w') = rewind-⊆ m w
+  in unbox (wk-nt w' x) m'
+
+record Box' (A' : Ctx -> Set) (Γ : Ctx) : Set where
+  constructor box'
+  field
+    unbox' : {Γ' Δ : Ctx} ->  Γ ⊆ Γ' -> Γ' ◁ Δ -> A' Δ
+
+-- Interpret a type to a presheaf
+⟦_⟧ty : Ty -> Ctx -> Set
+⟦ ι ⟧ty = _⊢nf ι
+⟦ A ⟶ B ⟧ty Γ = {Δ : Ctx} -> Γ ⊆ Δ -> ⟦ A ⟧ty Δ -> ⟦ B ⟧ty Δ
+⟦ □ A ⟧ty Γ = Box' ⟦ A ⟧ty Γ
+
+wkTy' : {A : Ty} {Γ Δ : Ctx} -> Γ ⊆ Δ -> ⟦ A ⟧ty Γ -> ⟦ A ⟧ty Δ
+wkTy' {ι} w A' = wk-nf w A'
+wkTy' {A ⟶ B} w A⟶B' w2 A' = A⟶B' (w ● w2) A'
+wkTy' {□ A} w (box' f) = box' λ w2 -> f (w ● w2)
+
+-- Interpret context to a presheaf
+Env = Rpl _◁_ ⟦_⟧ty
+⟦_⟧ctx = Env
+
+wkEnv : {Γ Δ Δ' : Ctx} -> Δ ⊆ Δ' -> ⟦ Γ ⟧ctx Δ -> ⟦ Γ ⟧ctx Δ'
+wkEnv w · = ·
+wkEnv {Γ , A} w (Γ' , A') = wkEnv w Γ' , wkTy' {A} w A'
+wkEnv w (lock Γ' m)
+  = let _ , (m' , w') = rewind-⊆ m w in lock (wkEnv w' Γ') m'
+
+-- Interpret terms-in-contexts as natural transformations
+⟦_⟧tm : {Γ : Ctx} {t : Tm} {A : Ty} -> Γ ⊢ t :: A -> {Δ : Ctx} -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
+⟦ var A∈Γ ⟧tm Γ' = lookup A∈Γ Γ'
+  where
+    lookup : ∀ {n A Γ Δ} -> Get A Γ n -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
+    lookup zero (_ , A') = A'
+    lookup (suc x) (Γ' , _) = lookup x Γ'
+⟦ abs x ⟧tm Γ' e y' = ⟦ x ⟧tm (wkEnv e Γ' , y')
+⟦ app x y ⟧tm Γ' = ⟦ x ⟧tm Γ' ⊆-id (⟦ y ⟧tm Γ')
+⟦ box x ⟧tm Γ' = box' λ w m -> ⟦ x ⟧tm (lock (wkEnv w Γ') m)
+⟦_⟧tm (unbox x m) Γ' = let
+  _ , (m' , Δ') = rewindRpl m Γ'
+  box' f = ⟦ x ⟧tm Δ'
+  in f ⊆-id m'
+
+reify : {A : Ty} {Γ : Ctx} -> ⟦ A ⟧ty Γ -> Γ ⊢nf A
+reflect : {A : Ty} {Γ : Ctx} -> Γ ⊢nt A -> ⟦ A ⟧ty Γ
+reify {ι} A' = A'
+reify {A ⟶ B} A⟶B' = abs (reify (A⟶B' (weak ⊆-id) (reflect {A} (var zero))))
+reify {□ A} (box' f) = let A' = f ⊆-id ◁1 in box (reify A')
+reflect {ι} x = nt x
+reflect {A ⟶ B} x w A' = reflect (app (wk-nt w x) (reify A'))
+reflect {□ A} x = box' λ w m -> reflect (unbox (wk-nt w x) m)
+
+-- Normalization function
+nf : {Γ : Ctx} {t : Tm} {A : Ty} -> Γ ⊢ t :: A -> Γ ⊢nf A
+nf x = reify (⟦ x ⟧tm freshEnv)
+  where
+    -- Initial environment consisting of all neutrals
+    freshEnv : {Γ : Ctx} -> ⟦ Γ ⟧ctx Γ
+    freshEnv {·} = ·
+    freshEnv {Γ , A} = wkEnv (weak ⊆-id) freshEnv , reflect {A} (var zero)
+    freshEnv {Γ ,🔓} = lock freshEnv ◁1
