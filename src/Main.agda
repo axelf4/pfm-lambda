@@ -20,115 +20,102 @@ module _
     -> Σ Ctx λ Δ' -> Δ' ◁ Δ × Rpl _◁_ F Γ' Δ')
   where
 
--- Preterms
-data Tm : Set where
-  var : ℕ -> Tm
-  abs : Tm -> Tm
-  app : Tm -> Tm -> Tm
-  box : Tm -> Tm
-  unbox : Tm -> Tm
+open Rpl using (·; _,_; lock)
 
--- Typing judgement: Term t is of type A in context Γ.
-data _⊢_::_ : Ctx -> Tm -> Ty -> Set where
-  var : {n : ℕ} {A : Ty} {Γ : Ctx}
-    -> n :: A ∈ Γ
-    -> Γ ⊢ var n :: A
-  abs : {A B : Ty} {Γ : Ctx} {t : Tm}
-    -> Γ , A ⊢ t :: B
-    -> Γ ⊢ abs t :: A ⟶ B
-  app : {A B : Ty} {Γ : Ctx} {t u : Tm}
-    -> Γ ⊢ t :: A ⟶ B -> Γ ⊢ u :: A
-    -> Γ ⊢ app t u :: B
-  box : {A : Ty} {Γ : Ctx} {t : Tm}
-    -> (Γ ,🔓) ⊢ t :: A
-    -> Γ ⊢ box t :: (□ A)
-  unbox : {A : Ty} {Γ Δ : Ctx} {t : Tm}
-    -> Δ ⊢ t :: (□ A)
+-- Intrinsically typed terms of type A in context Γ
+data _⊢_ : Ctx -> Ty -> Set where
+  var : {A : Ty} {Γ : Ctx}
+    -> A ∈ Γ
+    -> Γ ⊢ A
+  abs : {A B : Ty} {Γ : Ctx}
+    -> Γ , A ⊢ B
+    -> Γ ⊢ A ⟶ B
+  app : {A B : Ty} {Γ : Ctx}
+    -> Γ ⊢ A ⟶ B -> Γ ⊢ A
+    -> Γ ⊢ B
+  box : {A : Ty} {Γ : Ctx}
+    -> (Γ ,🔓) ⊢ A
+    -> Γ ⊢ (□ A)
+  unbox : {A : Ty} {Γ Δ : Ctx}
+    -> Δ ⊢ (□ A)
     -> Δ ◁ Γ
-    -> Γ ⊢ unbox t :: A
+    -> Γ ⊢ A
 
-infix 10 _⊢_::_
+infix 10 _⊢_
 
-wkVar : ∀ {Γ Δ A n} -> (w : Γ ⊆ Δ) -> n :: A ∈ Γ -> Σ ℕ (_:: A ∈ Δ)
-wkVar base x = _ , x
-wkVar (weak w) x = _ , suc (snd (wkVar w x))
-wkVar (lift w) zero = 0 , zero
-wkVar (lift w) (suc x) = _ , suc (snd (wkVar w x))
+wkVar : ∀ {Γ Δ A} -> (w : Γ ⊆ Δ) -> A ∈ Γ -> A ∈ Δ
+wkVar base x = x
+wkVar (weak w) x = suc (wkVar w x)
+wkVar (lift w) zero = zero
+wkVar (lift w) (suc x) = suc (wkVar w x)
 
 -- Variable weakening
-wk : ∀ {Γ Δ t A} -> Γ ⊆ Δ -> Γ ⊢ t :: A -> Σ Tm (Δ ⊢_:: A)
-wk w (var x) = _ , var (snd (wkVar w x))
-wk w (abs t) = _ , abs (snd (wk (lift w) t))
-wk w (app t s) = _ , app (snd (wk w t)) (snd (wk w s))
-wk w (box t) = _ , box (snd (wk (lift🔓 w) t))
+wk : ∀ {Γ Δ A} -> Γ ⊆ Δ -> Γ ⊢ A -> Δ ⊢ A
+wk w (var x) = var (wkVar w x)
+wk w (abs t) = abs (wk (lift w) t)
+wk w (app t s) = app (wk w t) (wk w s)
+wk w (box t) = box (wk (lift🔓 w) t)
 wk w (unbox t m) = let _ , (m' , w') = rewind-⊆ m w
-  in _ , unbox (snd (wk w' t)) m'
+  in unbox (wk w' t) m'
 
 -- Substitution from variables in context Γ to terms in context Δ
-Sub = Rpl _◁_ λ A Δ -> Σ Tm (Δ ⊢_:: A)
+Sub = Rpl _◁_ λ A Δ -> Δ ⊢ A
 
 wkSub : {Γ Δ Δ' : Ctx} -> Δ ⊆ Δ' -> Sub Γ Δ -> Sub Γ Δ'
 wkSub w · = ·
-wkSub w (σ , x) = wkSub w σ , wk w (snd x)
+wkSub w (σ , x) = wkSub w σ , wk w x
 wkSub w (lock σ m)
   = let _ , (m' , w') = rewind-⊆ m w in lock (wkSub w' σ) m'
 
 lift-sub : {Γ Δ : Ctx} {A : Ty} -> Sub Γ Δ -> Sub (Γ , A) (Δ , A)
-lift-sub σ = wkSub (weak ⊆-id) σ , (var 0 , var zero)
+lift-sub σ = wkSub (weak ⊆-id) σ , var zero
 
 id-sub : {Γ : Ctx} -> Sub Γ Γ
 id-sub {·} = ·
 id-sub {Γ , A} = lift-sub id-sub
 id-sub {Γ ,🔓} = lock id-sub ◁1
 
-subst : {Γ Δ : Ctx} {A : Ty} {t : Tm}
-  -> Sub Γ Δ -> Γ ⊢ t :: A -> Σ Tm (Δ ⊢_:: A)
-subst σ (abs x) = _ , abs (snd (subst (lift-sub σ) x))
-subst σ (app x y) = _ , app (snd (subst σ x)) (snd (subst σ y))
-subst σ (box x) = _ , box (snd (subst (lock σ ◁1) x))
+subst : {Γ Δ : Ctx} {A : Ty} -> Sub Γ Δ -> Γ ⊢ A -> Δ ⊢ A
+subst σ (abs x) = abs (subst (lift-sub σ) x)
+subst σ (app x y) = app (subst σ x) (subst σ y)
+subst σ (box x) = box (subst (lock σ ◁1) x)
 subst σ (unbox x m) = let _ , (m' , σ') = rewindRpl m σ
-  in _ , unbox (snd (subst σ' x)) m'
+  in unbox (subst σ' x) m'
 subst (σ , x) (var zero) = x
 subst (σ , _) (var (suc g)) = subst σ (var g)
 
 -- Applies unit substitution.
-_[_] : {Γ : Ctx} {t s : Tm} {A B : Ty}
-  -> Γ , B ⊢ t :: A
-  -> Γ ⊢ s :: B
-  -> Σ Tm (Γ ⊢_:: A)
-_[_] {s = s} x y = subst (id-sub , (s , y)) x
+_[_] : {Γ : Ctx} {A B : Ty} -> Γ , B ⊢ A -> Γ ⊢ B -> Γ ⊢ A
+_[_] x y = subst (id-sub , y) x
 
--- Equivalence of terms-in-context
-data _≅_ : {Γ : Ctx} {t s : Tm} {A : Ty}
-  -> Γ ⊢ t :: A -> Γ ⊢ s :: A -> Set where
-  ≅-refl : ∀ {Γ t A} {x : Γ ⊢ t :: A}
-    -> x ≅ x
-  ≅-sym : ∀ {Γ t s A} {x : Γ ⊢ t :: A} {y : Γ ⊢ s :: A}
-    -> x ≅ y -> y ≅ x
-  ≅-trans : ∀ {Γ t s u A} {x : Γ ⊢ t :: A} {y : Γ ⊢ s :: A} {z : Γ ⊢ u :: A}
-    -> x ≅ y -> y ≅ z -> x ≅ z
+-- Equivalence of terms-in-contexts
+data _~_ : {Γ : Ctx} {A : Ty} -> (t s : Γ ⊢ A) -> Set where
+  β : ∀ {Γ A B} -> (x : Γ , A ⊢ B) -> (y : Γ ⊢ A)
+    -> app (abs x) y ~ (x [ y ])
+  η : ∀ {Γ A B} {x : Γ ⊢ A ⟶ B}
+    -> x ~ abs (app (wk (weak ⊆-id) x) (var zero))
 
-  β : ∀ {Γ t A B} -> (x : Γ , A ⊢ t :: B) -> (y : Γ ⊢ t :: A)
-    -> app (abs x) y ≅ snd (x [ y ])
-  η : ∀ {Γ t A B} {x : Γ ⊢ t :: A ⟶ B}
-    -> x ≅ abs (app (snd (wk (weak ⊆-id) x)) (var zero))
+  □-β : ∀ {Γ Γ' A} {x : Γ ,🔓 ⊢ A} {m : Γ ◁ Γ'}
+    -> unbox (box x) m ~ subst (lock id-sub m) x
+  □-η : ∀ {Γ A} -> {x : Γ ⊢ □ A}
+    -> x ~ box (unbox x ◁1)
 
-  □-β : ∀ {Γ Γ' t A} {x : Γ ,🔓 ⊢ t :: A} {m : Γ ◁ Γ'}
-    -> unbox (box x) m ≅ snd (subst (lock id-sub m) x)
-  □-η : ∀ {Γ t A} -> {x : Γ ⊢ t :: □ A}
-    -> x ≅ box (unbox x ◁1)
+  ~-refl : ∀ {Γ A} {x : Γ ⊢ A}
+    -> x ~ x
+  ~-sym : ∀ {Γ A} {x y : Γ ⊢ A}
+    -> x ~ y -> y ~ x
+  ~-trans : ∀ {Γ A} {x y z : Γ ⊢ A}
+    -> x ~ y -> y ~ z -> x ~ z
 
   -- Congruence rules
-  cong-abs : ∀ {Γ t t' A B} {x : Γ , A ⊢ t :: B} {y : Γ , A ⊢ t' :: B}
-    -> x ≅ y -> abs x ≅ abs y
-  cong-app1 : ∀ {Γ t t' t'' A B} {x : Γ ⊢ t :: A ⟶ B} {x' : Γ ⊢ t' :: A ⟶ B} {y : Γ ⊢ t'' :: A}
-    -> x ≅ x' -> app x y ≅ app x' y
-  cong-app2 : ∀ {Γ t t' t'' A B} {x : Γ ⊢ t :: A ⟶ B} {y : Γ ⊢ t' :: A} {y' : Γ ⊢ t'' :: A}
-    -> y ≅ y' -> app x y ≅ app x y'
-  cong-box : ∀ {Γ t t' A} {x : Γ ,🔓 ⊢ t :: A} {y : Γ ,🔓 ⊢ t' :: A}
-    -> x ≅ y -> box x ≅ box y
-  cong-unbox : ∀ {Γ Δ t t' A} {x : Δ ⊢ t :: □ A} {y : Δ ⊢ t' :: □ A} {m : Δ ◁ Γ}
-    -> x ≅ y -> unbox x m ≅ unbox y m
+  cong-abs : ∀ {Γ A B} {x y : Γ , A ⊢ B}
+    -> x ~ y -> abs x ~ abs y
+  cong-app : ∀ {Γ A B} {x x' : Γ ⊢ A ⟶ B} {y y' : Γ ⊢ A}
+    -> x ~ x' -> y ~ y' -> app x y ~ app x' y'
+  cong-box : ∀ {Γ A} {x y : Γ ,🔓 ⊢ A}
+    -> x ~ y -> box x ~ box y
+  cong-unbox : ∀ {Γ Δ A} {x y : Δ ⊢ □ A} {m : Δ ◁ Γ}
+    -> x ~ y -> unbox x m ~ unbox y m
 
 mutual
   -- Normal forms
@@ -138,31 +125,31 @@ mutual
     box : {A : Ty} -> Γ ,🔓 ⊢nf A -> Γ ⊢nf □ A
   -- Neutral terms
   data _⊢nt_ (Γ : Ctx) : Ty -> Set where
-    var : {A : Ty} -> {n : ℕ} -> Get A Γ n -> Γ ⊢nt A
+    var : {A : Ty} -> A ∈ Γ -> Γ ⊢nt A
     app : {A B : Ty} -> Γ ⊢nt A ⟶ B -> Γ ⊢nf A -> Γ ⊢nt B
     unbox : {A : Ty} {Γ' : Ctx} -> Γ' ⊢nt □ A -> Γ' ◁ Γ -> Γ ⊢nt A
 
 infix 10 _⊢nf_ _⊢nt_
-
--- Quotation of normal forms/neutrals back into terms
-⌜_⌝nf : {Γ : Ctx} {A : Ty} -> Γ ⊢nf A -> Σ Tm (Γ ⊢_:: A)
-⌜_⌝nt : {Γ : Ctx} {A : Ty} -> Γ ⊢nt A -> Σ Tm (Γ ⊢_:: A)
-⌜ nt x ⌝nf = ⌜ x ⌝nt
-⌜ abs x ⌝nf = _ , abs (snd ⌜ x ⌝nf)
-⌜ box x ⌝nf = _ , box (snd ⌜ x ⌝nf)
-⌜ var x ⌝nt = _ , var x
-⌜ app x y ⌝nt = _ , app (snd ⌜ x ⌝nt) (snd ⌜ y ⌝nf)
-⌜ unbox x m ⌝nt = _ , unbox (snd ⌜ x ⌝nt) m
 
 wk-nf : {Γ Δ : Ctx} {A : Ty} -> Γ ⊆ Δ -> Γ ⊢nf A -> Δ ⊢nf A
 wk-nt : {Γ Δ : Ctx} {A : Ty} -> Γ ⊆ Δ -> Γ ⊢nt A -> Δ ⊢nt A
 wk-nf w (nt x) = nt (wk-nt w x)
 wk-nf w (abs x) = abs (wk-nf (lift w) x)
 wk-nf w (box x) = box (wk-nf (lift🔓 w) x)
-wk-nt w (var x) = var (snd (wkVar w x))
+wk-nt w (var x) = var (wkVar w x)
 wk-nt w (app x y) = app (wk-nt w x) (wk-nf w y)
 wk-nt w (unbox x m) = let _ , (m' , w') = rewind-⊆ m w
   in unbox (wk-nt w' x) m'
+
+-- Quotation of normal forms/neutrals back into terms
+⌜_⌝nf : {Γ : Ctx} {A : Ty} -> Γ ⊢nf A -> Γ ⊢ A
+⌜_⌝nt : {Γ : Ctx} {A : Ty} -> Γ ⊢nt A -> Γ ⊢ A
+⌜ nt x ⌝nf = ⌜ x ⌝nt
+⌜ abs x ⌝nf = abs ⌜ x ⌝nf
+⌜ box x ⌝nf = box ⌜ x ⌝nf
+⌜ var x ⌝nt = var x
+⌜ app x y ⌝nt = app ⌜ x ⌝nt ⌜ y ⌝nf
+⌜ unbox x m ⌝nt = unbox ⌜ x ⌝nt m
 
 record Box' (A' : Ctx -> Set) (Γ : Ctx) : Set where
   constructor box'
@@ -171,7 +158,7 @@ record Box' (A' : Ctx -> Set) (Γ : Ctx) : Set where
 
 -- Interpret a type to a presheaf
 ⟦_⟧ty : Ty -> Ctx -> Set
-⟦ ι ⟧ty = _⊢nf ι
+⟦ ι ⟧ty Γ = Γ ⊢nf ι
 ⟦ A ⟶ B ⟧ty Γ = {Δ : Ctx} -> Γ ⊆ Δ -> ⟦ A ⟧ty Δ -> ⟦ B ⟧ty Δ
 ⟦ □ A ⟧ty Γ = Box' ⟦ A ⟧ty Γ
 
@@ -180,21 +167,30 @@ wkTy' {ι} w A' = wk-nf w A'
 wkTy' {A ⟶ B} w A⟶B' w2 A' = A⟶B' (w ● w2) A'
 wkTy' {□ A} w (box' f) = box' λ w2 -> f (w ● w2)
 
+reify : {A : Ty} {Γ : Ctx} -> ⟦ A ⟧ty Γ -> Γ ⊢nf A
+reflect : {A : Ty} {Γ : Ctx} -> Γ ⊢nt A -> ⟦ A ⟧ty Γ
+reify {ι} A' = A'
+reify {A ⟶ B} A⟶B' = abs (reify (A⟶B' (weak ⊆-id) (reflect (var zero))))
+reify {□ A} (box' f) = let A' = f ⊆-id ◁1 in box (reify A')
+reflect {ι} x = nt x
+reflect {A ⟶ B} x w A' = reflect (app (wk-nt w x) (reify A'))
+reflect {□ A} x = box' λ w m -> reflect (unbox (wk-nt w x) m)
+
 -- Interpret context to a presheaf
 Env = Rpl _◁_ ⟦_⟧ty
 ⟦_⟧ctx = Env
 
 wkEnv : {Γ Δ Δ' : Ctx} -> Δ ⊆ Δ' -> ⟦ Γ ⟧ctx Δ -> ⟦ Γ ⟧ctx Δ'
 wkEnv w · = ·
-wkEnv {Γ , A} w (Γ' , A') = wkEnv w Γ' , wkTy' {A} w A'
+wkEnv w (Γ' , A') = wkEnv w Γ' , wkTy' w A'
 wkEnv w (lock Γ' m)
   = let _ , (m' , w') = rewind-⊆ m w in lock (wkEnv w' Γ') m'
 
 -- Interpret terms-in-contexts as natural transformations
-⟦_⟧tm : {Γ : Ctx} {t : Tm} {A : Ty} -> Γ ⊢ t :: A -> {Δ : Ctx} -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
+⟦_⟧tm : {Γ : Ctx} {A : Ty} -> Γ ⊢ A -> {Δ : Ctx} -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
 ⟦ var A∈Γ ⟧tm Γ' = lookup A∈Γ Γ'
   where
-    lookup : ∀ {n A Γ Δ} -> Get A Γ n -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
+    lookup : ∀ {A Γ Δ} -> A ∈ Γ -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
     lookup zero (_ , A') = A'
     lookup (suc x) (Γ' , _) = lookup x Γ'
 ⟦ abs x ⟧tm Γ' e y' = ⟦ x ⟧tm (wkEnv e Γ' , y')
@@ -205,21 +201,12 @@ wkEnv w (lock Γ' m)
   box' f = ⟦ x ⟧tm Δ'
   in f ⊆-id m'
 
-reify : {A : Ty} {Γ : Ctx} -> ⟦ A ⟧ty Γ -> Γ ⊢nf A
-reflect : {A : Ty} {Γ : Ctx} -> Γ ⊢nt A -> ⟦ A ⟧ty Γ
-reify {ι} A' = A'
-reify {A ⟶ B} A⟶B' = abs (reify (A⟶B' (weak ⊆-id) (reflect {A} (var zero))))
-reify {□ A} (box' f) = let A' = f ⊆-id ◁1 in box (reify A')
-reflect {ι} x = nt x
-reflect {A ⟶ B} x w A' = reflect (app (wk-nt w x) (reify A'))
-reflect {□ A} x = box' λ w m -> reflect (unbox (wk-nt w x) m)
-
 -- Normalization function
-nf : {Γ : Ctx} {t : Tm} {A : Ty} -> Γ ⊢ t :: A -> Γ ⊢nf A
+nf : {Γ : Ctx} {A : Ty} -> Γ ⊢ A -> Γ ⊢nf A
 nf x = reify (⟦ x ⟧tm freshEnv)
   where
     -- Initial environment consisting of all neutrals
     freshEnv : {Γ : Ctx} -> ⟦ Γ ⟧ctx Γ
     freshEnv {·} = ·
-    freshEnv {Γ , A} = wkEnv (weak ⊆-id) freshEnv , reflect {A} (var zero)
+    freshEnv {Γ , A} = wkEnv (weak ⊆-id) freshEnv , reflect (var zero)
     freshEnv {Γ ,🔓} = lock freshEnv ◁1

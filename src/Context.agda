@@ -21,12 +21,9 @@ data Ctx : Set where
   _,🔓 : (Γ : Ctx) -> Ctx
 
 -- The type A can be found in the context at index n.
-data Get (A : Ty) : Ctx -> ℕ -> Set where
-  zero : {Γ : Ctx} -> Get A (Γ , A) 0
-  suc : {Γ : Ctx} {n : ℕ} {B : Ty} -> Get A Γ n -> Get A (Γ , B) (suc n)
-
-_::_∈_ : ℕ -> (A : Ty) -> (Γ : Ctx) -> Set
-n :: A ∈ Γ = Get A Γ n
+data _∈_ (A : Ty) : Ctx -> Set where
+  zero : {Γ : Ctx} -> A ∈ (Γ , A)
+  suc : {Γ : Ctx} {B : Ty} -> A ∈ Γ -> A ∈ (Γ , B)
 
 -- Relation between contexts Γ and Γ' signifying that it is possible
 -- to extend Γ to Γ', maybe adding any locks.
