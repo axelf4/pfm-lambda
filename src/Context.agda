@@ -153,3 +153,14 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) (F : Ty -> Ctx -> Set) where
       (≡.sym (trimNat w (weak ⊆.id) id))
       (cong drop (trimIdr w)))
     trimIdr (lift🔓 w) = cong1 lock (trimIdr w)
+
+  module Composition
+    (rewind : {Γ Γ' Δ : Ctx} -> (m : Γ' ◁ Γ) -> Rpl Γ Δ
+      -> Σ Ctx λ Δ' -> Δ' ◁ Δ × Rpl Γ' Δ')
+    (apply : {A : Ty} {Γ Δ : Ctx} -> Rpl Γ Δ -> F A Γ -> F A Δ)
+    where
+    _∙_ : {Γ Γ' Γ'' : Ctx} -> Rpl Γ Γ' -> Rpl Γ' Γ'' -> Rpl Γ Γ''
+    · ∙ y = ·
+    (x , a) ∙ y = (x ∙ y) , apply y a
+    lock x m ∙ y
+      = let _ , (m' , y') = rewind m y in lock (x ∙ y') m'
