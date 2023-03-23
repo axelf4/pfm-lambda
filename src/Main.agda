@@ -11,13 +11,15 @@ module _
   -- (\lhd -> ◁)
   (_◁_ : Ctx -> Ctx -> Set)
   (◁1 : {Γ : Ctx} -> Γ ◁ (Γ ,🔓))
+  (let module Rpl = Replacement _◁_)
+  (let Rpl = Rpl.Rpl)
   -- Trim OPE:s and substitutions/environments
   (rewind-⊆ : {Γ Γ' Δ : Ctx}
     -> (m : Γ' ◁ Γ) -> (w : Γ ⊆ Δ)
     -> Σ Ctx λ Δ' -> Δ' ◁ Δ × Γ' ⊆ Δ')
   (rewindRpl : {F : Ty -> Ctx -> Set} {Γ Γ' Δ : Ctx}
-    -> (m : Γ' ◁ Γ) -> (x : Rpl _◁_ F Γ Δ)
-    -> Σ Ctx λ Δ' -> Δ' ◁ Δ × Rpl _◁_ F Γ' Δ')
+    -> (m : Γ' ◁ Γ) -> (x : Rpl F Γ Δ)
+    -> Σ Ctx λ Δ' -> Δ' ◁ Δ × Rpl F Γ' Δ')
   where
 
 open Rpl using (·; _,_; lock)
@@ -43,12 +45,6 @@ data _⊢_ : Ctx -> Ty -> Set where
 
 infix 10 _⊢_
 
-wkVar : ∀ {Γ Δ A} -> (w : Γ ⊆ Δ) -> A ∈ Γ -> A ∈ Δ
-wkVar base x = x
-wkVar (weak w) x = suc (wkVar w x)
-wkVar (lift w) zero = zero
-wkVar (lift w) (suc x) = suc (wkVar w x)
-
 -- Variable weakening
 wk : ∀ {Γ Δ A} -> Γ ⊆ Δ -> Γ ⊢ A -> Δ ⊢ A
 wk w (var x) = var (wkVar w x)
@@ -59,24 +55,14 @@ wk w (unbox t m) = let _ , (m' , w') = rewind-⊆ m w
   in unbox (wk w' t) m'
 
 -- Substitution from variables in context Γ to terms in context Δ
-Sub = Rpl _◁_ λ A Δ -> Δ ⊢ A
-
-wkSub : {Γ Δ Δ' : Ctx} -> Δ ⊆ Δ' -> Sub Γ Δ -> Sub Γ Δ'
-wkSub w · = ·
-wkSub w (σ , x) = wkSub w σ , wk w x
-wkSub w (lock σ m)
-  = let _ , (m' , w') = rewind-⊆ m w in lock (wkSub w' σ) m'
-
-lift-sub : {Γ Δ : Ctx} {A : Ty} -> Sub Γ Δ -> Sub (Γ , A) (Δ , A)
-lift-sub σ = wkSub (weak ⊆-id) σ , var zero
-
-id-sub : {Γ : Ctx} -> Sub Γ Γ
-id-sub {·} = ·
-id-sub {Γ , A} = lift-sub id-sub
-id-sub {Γ ,🔓} = lock id-sub ◁1
+Sub = Rpl (λ A Δ -> Δ ⊢ A)
+module Sub = Rpl.Properties
+  (λ A Δ -> Δ ⊢ A)
+  ◁1 rewind-⊆
+  wk (var zero)
 
 subst : {Γ Δ : Ctx} {A : Ty} -> Sub Γ Δ -> Γ ⊢ A -> Δ ⊢ A
-subst σ (abs x) = abs (subst (lift-sub σ) x)
+subst σ (abs x) = abs (subst (Sub.liftRpl σ) x)
 subst σ (app x y) = app (subst σ x) (subst σ y)
 subst σ (box x) = box (subst (lock σ ◁1) x)
 subst σ (unbox x m) = let _ , (m' , σ') = rewindRpl m σ
@@ -86,17 +72,17 @@ subst (σ , _) (var (suc g)) = subst σ (var g)
 
 -- Applies unit substitution.
 _[_] : {Γ : Ctx} {A B : Ty} -> Γ , B ⊢ A -> Γ ⊢ B -> Γ ⊢ A
-_[_] x y = subst (id-sub , y) x
+_[_] x y = subst (Sub.id , y) x
 
 -- Equivalence of terms-in-contexts
 data _~_ : {Γ : Ctx} {A : Ty} -> (t s : Γ ⊢ A) -> Set where
   β : ∀ {Γ A B} -> (x : Γ , A ⊢ B) -> (y : Γ ⊢ A)
     -> app (abs x) y ~ (x [ y ])
   η : ∀ {Γ A B} {x : Γ ⊢ A ⟶ B}
-    -> x ~ abs (app (wk (weak ⊆-id) x) (var zero))
+    -> x ~ abs (app (wk (weak ⊆.id) x) (var zero))
 
   □-β : ∀ {Γ Γ' A} {x : Γ ,🔓 ⊢ A} {m : Γ ◁ Γ'}
-    -> unbox (box x) m ~ subst (lock id-sub m) x
+    -> unbox (box x) m ~ subst (lock Sub.id m) x
   □-η : ∀ {Γ A} -> {x : Γ ⊢ □ A}
     -> x ~ box (unbox x ◁1)
 
@@ -170,21 +156,19 @@ wkTy' {□ A} w (box' f) = box' λ w2 -> f (w ● w2)
 reify : {A : Ty} {Γ : Ctx} -> ⟦ A ⟧ty Γ -> Γ ⊢nf A
 reflect : {A : Ty} {Γ : Ctx} -> Γ ⊢nt A -> ⟦ A ⟧ty Γ
 reify {ι} A' = A'
-reify {A ⟶ B} A⟶B' = abs (reify (A⟶B' (weak ⊆-id) (reflect (var zero))))
-reify {□ A} (box' f) = let A' = f ⊆-id ◁1 in box (reify A')
+reify {A ⟶ B} A⟶B' = abs (reify (A⟶B' (weak ⊆.id) (reflect (var zero))))
+reify {□ A} (box' f) = let A' = f ⊆.id ◁1 in box (reify A')
 reflect {ι} x = nt x
 reflect {A ⟶ B} x w A' = reflect (app (wk-nt w x) (reify A'))
 reflect {□ A} x = box' λ w m -> reflect (unbox (wk-nt w x) m)
 
 -- Interpret context to a presheaf
-Env = Rpl _◁_ ⟦_⟧ty
+Env = Rpl ⟦_⟧ty
 ⟦_⟧ctx = Env
-
-wkEnv : {Γ Δ Δ' : Ctx} -> Δ ⊆ Δ' -> ⟦ Γ ⟧ctx Δ -> ⟦ Γ ⟧ctx Δ'
-wkEnv w · = ·
-wkEnv w (Γ' , A') = wkEnv w Γ' , wkTy' w A'
-wkEnv w (lock Γ' m)
-  = let _ , (m' , w') = rewind-⊆ m w in lock (wkEnv w' Γ') m'
+module Env = Rpl.Properties
+  ⟦_⟧ty
+  ◁1 rewind-⊆
+  wkTy' (reflect (var zero))
 
 -- Interpret terms-in-contexts as natural transformations
 ⟦_⟧tm : {Γ : Ctx} {A : Ty} -> Γ ⊢ A -> {Δ : Ctx} -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
@@ -193,20 +177,15 @@ wkEnv w (lock Γ' m)
     lookup : ∀ {A Γ Δ} -> A ∈ Γ -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
     lookup zero (_ , A') = A'
     lookup (suc x) (Γ' , _) = lookup x Γ'
-⟦ abs x ⟧tm Γ' e y' = ⟦ x ⟧tm (wkEnv e Γ' , y')
-⟦ app x y ⟧tm Γ' = ⟦ x ⟧tm Γ' ⊆-id (⟦ y ⟧tm Γ')
-⟦ box x ⟧tm Γ' = box' λ w m -> ⟦ x ⟧tm (lock (wkEnv w Γ') m)
+⟦ abs x ⟧tm Γ' e y' = ⟦ x ⟧tm (Env.wk e Γ' , y')
+⟦ app x y ⟧tm Γ' = ⟦ x ⟧tm Γ' ⊆.id (⟦ y ⟧tm Γ')
+⟦ box x ⟧tm Γ' = box' λ w m -> ⟦ x ⟧tm (lock (Env.wk w Γ') m)
 ⟦_⟧tm (unbox x m) Γ' = let
   _ , (m' , Δ') = rewindRpl m Γ'
   box' f = ⟦ x ⟧tm Δ'
-  in f ⊆-id m'
+  in f ⊆.id m'
 
 -- Normalization function
 nf : {Γ : Ctx} {A : Ty} -> Γ ⊢ A -> Γ ⊢nf A
-nf x = reify (⟦ x ⟧tm freshEnv)
-  where
-    -- Initial environment consisting of all neutrals
-    freshEnv : {Γ : Ctx} -> ⟦ Γ ⟧ctx Γ
-    freshEnv {·} = ·
-    freshEnv {Γ , A} = wkEnv (weak ⊆-id) freshEnv , reflect (var zero)
-    freshEnv {Γ ,🔓} = lock freshEnv ◁1
+-- Evaluate in fresh environment consisting of all neutrals
+nf t = reify (⟦ t ⟧tm Env.id)
