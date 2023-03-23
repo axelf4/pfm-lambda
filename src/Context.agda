@@ -108,6 +108,13 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) (F : Ty -> Ctx -> Set) where
     wk w (lock σ m)
       = let _ , (m' , w') = rewind-⊆ m w in lock (wk w' σ) m'
 
+    -- Composition of weakening and substitution
+    trim : {Γ Γ' Δ : Ctx} -> Γ ⊆ Γ' -> Rpl Γ' Δ -> Rpl Γ Δ
+    trim base · = ·
+    trim (weak w) (σ , _) = trim w σ
+    trim (lift w) (σ , x) = trim w σ , x
+    trim (lift🔓 w) (lock σ m) = lock (trim w σ) m
+
     drop : {Γ Δ : Ctx} {A : Ty} -> Rpl Γ Δ -> Rpl Γ (Δ , A)
     drop = wk (weak ⊆.id)
 
@@ -118,3 +125,31 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) (F : Ty -> Ctx -> Set) where
     id {·} = ·
     id {x , A} = liftRpl id
     id {x ,🔓} = lock id ◁1
+
+    from-⊆ : {Γ Δ : Ctx} -> Γ ⊆ Δ -> Rpl Γ Δ
+    from-⊆ base = ·
+    from-⊆ (weak w) = drop (from-⊆ w)
+    from-⊆ (lift w) = from-⊆ (weak w) , head
+    from-⊆ (lift🔓 w) = lock (from-⊆ w) ◁1
+
+    trimNat : {Γ Γ' Δ Δ' : Ctx} (w : Γ' ⊆ Γ) (w' : Δ ⊆ Δ') (σ : Rpl Γ Δ)
+      -> wk w' (trim w σ) ≡ trim w (wk w' σ)
+    trimNat base w' · = refl
+    trimNat (weak w) w' (σ , x) = trimNat w w' σ
+    trimNat (lift w) w' (σ , x) = cong1 _,_ (trimNat w w' σ)
+    trimNat (lift🔓 w) w' (lock σ m) = cong1 lock (trimNat w _ σ)
+
+    trimIdl : {Γ Δ : Ctx} -> (σ : Rpl Γ Δ) -> trim ⊆.id σ ≡ σ
+    trimIdl · = refl
+    trimIdl (s , x) = cong (_, x) (trimIdl s)
+    trimIdl (lock s m) = cong1 lock (trimIdl s)
+
+    trimIdr : {Γ Δ : Ctx} -> (w : Γ ⊆ Δ) -> trim w id ≡ from-⊆ w
+    trimIdr base = refl
+    trimIdr (weak w) = ≡.trans
+      (≡.sym (trimNat w (weak ⊆.id) id))
+      (cong drop (trimIdr w))
+    trimIdr (lift w) = cong (_, head) (≡.trans
+      (≡.sym (trimNat w (weak ⊆.id) id))
+      (cong drop (trimIdr w)))
+    trimIdr (lift🔓 w) = cong1 lock (trimIdr w)
