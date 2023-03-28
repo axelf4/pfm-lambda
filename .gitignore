@@ -1,1 +1,195 @@
 *.agdai
+
+## Core latex/pdflatex auxiliary files:
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+.*.lb
+
+## Intermediate documents:
+*.dvi
+*.xdv
+*-converted-to.*
+
+## Generated if empty string is given at "Please type another file name for output:"
+.pdf
+
+## Bibliography auxiliary files (bibtex/biblatex/biber):
+*.bbl
+*.bcf
+*.blg
+*-blx.aux
+*-blx.bib
+*.run.xml
+
+## Build tool auxiliary files:
+*.fdb_latexmk
+*.synctex
+*.synctex(busy)
+*.synctex.gz
+*.synctex.gz(busy)
+*.pdfsync
+
+## Build tool directories for auxiliary files
+# latexrun
+latex.out/
+
+## Auxiliary and intermediate files from other packages:
+# algorithms
+*.alg
+*.loa
+
+# achemso
+acs-*.bib
+
+# amsthm
+*.thm
+
+# beamer
+*.nav
+*.pre
+*.snm
+*.vrb
+
+# changes
+*.soc
+
+# comment
+*.cut
+
+# cprotect
+*.cpt
+
+# elsarticle (documentclass of Elsevier journals)
+*.spl
+
+# endnotes
+*.ent
+
+# feynmf/feynmp
+*.mf
+*.mp
+*.t[1-9]
+*.t[1-9][0-9]
+*.tfm
+
+# glossaries
+*.acn
+*.acr
+*.glg
+*.glo
+*.gls
+*.glsdefs
+*.lzo
+*.lzs
+*.slg
+*.slo
+*.sls
+
+# uncomment this for glossaries-extra (will ignore makeindex's style files!)
+# *.ist
+
+# htlatex
+*.4ct
+*.4tc
+*.idv
+*.lg
+*.trc
+*.xref
+
+# hyperref
+*.brf
+
+# listings
+*.lol
+
+# luatexja-ruby
+*.ltjruby
+
+# makeidx
+*.idx
+*.ilg
+*.ind
+
+# minitoc
+*.maf
+*.mlf
+*.mlt
+*.mtc[0-9]*
+*.slf[0-9]*
+*.slt[0-9]*
+*.stc[0-9]*
+
+# minted
+_minted*
+*.pyg
+
+# morewrites
+*.mw
+
+# newpax
+*.newpax
+
+# nomencl
+*.nlg
+*.nlo
+*.nls
+
+# pax
+*.pax
+
+# scrwfile
+*.wrt
+
+# svg
+svg-inkscape/
+
+# pdfcomment
+*.upa
+*.upb
+
+# tcolorbox
+*.listing
+
+# thmtools
+*.loe
+
+# TikZ & PGF
+*.dpth
+*.md5
+*.auxlock
+
+# titletoc
+*.ptc
+
+# xcolor
+*.xcp
+
+# xmpincl
+*.xmpi
+
+# xindy
+*.xdy
+
+# xypic precompiled matrices and outlines
+*.xyc
+*.xyd
+
+# standalone packages
+*.sta
+
+# Makeindex log files
+*.lpz
+
+# xwatermark package
+*.xwm
+
+/paper/thesis.pdf

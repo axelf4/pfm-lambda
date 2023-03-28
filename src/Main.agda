@@ -408,8 +408,8 @@ record Box' (A' : Ctx -> Set) (Γ : Ctx) : Set where
 ⟦ □ A ⟧ty Γ = Box' ⟦ A ⟧ty Γ
 
 wkTy' : {A : Ty} {Γ Δ : Ctx} -> Γ ⊆ Δ -> ⟦ A ⟧ty Γ -> ⟦ A ⟧ty Δ
-wkTy' {ι} w A' = wkNf w A'
-wkTy' {A ⟶ B} w A⟶B' w2 A' = A⟶B' (w ● w2) A'
+wkTy' {ι} w = wkNf w
+wkTy' {A ⟶ B} w A⟶B' w2 = A⟶B' (w ● w2)
 wkTy' {□ A} w (box' f) = box' λ w2 -> f (w ● w2)
 
 reify : {A : Ty} {Γ : Ctx} -> ⟦ A ⟧ty Γ -> Γ ⊢nf A
@@ -493,7 +493,7 @@ fund (abs t) {σ} σ≈δ w {a} {a'} a≈a' = ≡.subst
   (β (wk (lift w) (subst (Sub.liftRpl σ) t)) a)
   ~◼≈ fund t (wk-≈ctx w σ≈δ , a≈a')
 fund (app t s) {σ} σ≈δ rewrite ≡.sym (wkId (subst σ t))
-  = (fund t σ≈δ) ⊆.id (fund s σ≈δ)
+  = fund t σ≈δ ⊆.id (fund s σ≈δ)
 fund (box t) {σ} σ≈δ w m = ≡.subst
   (unbox (wk w (subst σ (box t))) m ~_)
   (begin

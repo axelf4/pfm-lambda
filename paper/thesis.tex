@@ -1,0 +1,464 @@
+\documentclass{article}
+
+\usepackage{fontspec}
+\usepackage[backend=biber]{biblatex}
+\usepackage[hidelinks]{hyperref}
+\usepackage{amsmath,amssymb,stmaryrd}
+\usepackage{mathtools}
+\usepackage{tikz}
+\usepackage{mathpartir}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{listings}
+
+\bibliography{sources.bib}
+
+\newtheorem{theorem}{Theorem}
+
+\newcommand{\lock}{
+  \text{\tikz[baseline]{
+      \fill[rounded corners=.1ex] (-.75ex,0) rectangle ++(1.5ex,1ex);
+      \draw[line width=.3ex] (-.45ex,.5ex) -- ++(0,.75ex) arc (180:0:.45ex) -- ++(0,-.75ex);
+}}}
+
+\DeclareMathOperator\Rpl{Rpl}
+\DeclareMathOperator\unbox{unbox}
+
+\begin{document}
+
+\begin{titlepage}\centering
+
+{\scshape\LARGE Master Thesis Half-Time Report\\}
+
+\vspace{0.5cm}
+
+{\huge\bfseries A Parametric Fitch-Style Modal Lambda Calculus\\}
+
+\vspace{2cm}
+
+{\Large Axel Forsman \texttt{<foraxel@student.chalmers.se>} \\}
+
+\vspace{1.0cm}
+
+{\large Supervisor: Nachiappan Valliappan \\}
+
+\vspace{1.0cm}
+
+{\large Examiner: Andreas Abel \\}
+
+\vspace{1.5cm}
+
+{\large Relevant completed courses:\par}
+
+{\itshape \begin{itemize}
+  \item DAT060, Logic in Computer Science; and
+  \item DAT350, Types for Programs and Proofs.
+  \end{itemize}}
+
+\vfill
+{\large April 17, 2023 \\}
+\end{titlepage}
+
+\section{Introduction}
+
+The \emph{necessity modality}, denoted by $\Box$, where the focus will lie,
+has been applied to model confidentiality in information-flow control,
+compartmental purity in functional languages,
+and more.
+For a formula $\phi$, the formula $\Box \phi$ reads
+``It is necessarily true that $\phi$'' -
+$\Box$ changes the \emph{mode} of $\phi$.
+So called Fitch-style modal deduction,
+where modalities are eliminated by opening a subproof,
+and introduced by shutting one,
+has been adapted for lambda calculi.
+Different modal logics may be encoded via different open and shut rules.
+Prior work \cite{valliappan22} has given normalization proofs
+for four Fitch-style formulations of lambda calculi with different modalities,
+which required repeating the proofs for each individual calculus.
+This prompts the need for a parametric Fitch-style modal lambda calculus
+generalizing the variants,
+in order to avoid repetition and ease further extensions.
+
+\section{Background}
+
+\textcite{fitch52} introduced a method for propositional deduction,
+central to which is the idea of \emph{subordinate proof}.
+For example, in order to prove $A \rightarrow B$ a subordinate proof may be opened
+containing the new assumption $A$, where one sets out to prove $B$.
+If successful, the subordinate proof can be shut
+by introducing $A \rightarrow B$ in the original proof
+thereby discharging the assumption $A$.
+
+This has been adapted for modal lambda calculi \cite{borghuis94},
+where modalities are type constructors that add some properties.
+These may be understood using Kripke's possible worlds interpretation \cite{kripke63, huth04},
+where opening a subproof means visiting a replica new world,
+and shutting means returning.
+To keep track of subordinate proofs in typing judgements
+a new structural connective $\lock$ is added to the context when a $\Box$ is eliminated,
+and popped when the subproof is closed.
+
+\emph{Normalization by Evaluation} (NbE) is a technique for reducing terms to their normal forms,
+which are not further reducible \cite{berger91}.
+Instead of implementing the normalization procedure ``by hand'',
+you instead proceed by evaluating,
+before \emph{reifying} the resulting semantic value back into a term.
+If at any point computation is blocked on a value known only at run time,
+e.g. on an argument when descending into a lambda,
+evaluation proceeds with a so called \emph{neutral value},
+containing enough information about its origins to make reification possible.
+
+Here we consider the family of Fitch-style modal lambda calculi
+derived from intuitionistic propositional logic
+extended with the unary connective $\Box$,
+the inference rule \emph{necessitation}, if $\cdot \vdash A$ then $\Gamma \cdot \Box A$,
+and different axioms surrounding $\Box$ \cite{clouston18}.
+The most basic modal calculi, $\lambda_\text{IK}$,
+comes from the \emph{K axiom}
+($\Box(A \rightarrow B) \rightarrow \Box A \rightarrow \Box B$).
+K together with \emph{axiom T} ($\Box A \rightarrow A$) gives $\lambda_\text{IT}$;
+K and \emph{axiom 4} ($\Box A \rightarrow \Box\Box A$) yield $\lambda_\text{IK4}$;
+and K, T and 4 give $\lambda_\text{IS4}$.
+
+\textcite{valliappan22} noted that for the four lambda calculi
+$\lambda_\text{IK}$, $\lambda_\text{IT}$, $\lambda_\text{IK4}$, $\lambda_\text{IS4}$,
+only the $\Box$-elimination rules differ,
+see figure~\ref{fig:elim-rules},
+and chose to instead define the $\Box$-elimination rules
+in terms of different \emph{modal accessibility relations} $\Delta\lhd\Gamma$.
+The relation $\Delta\lhd\Gamma$ should be thought as saying
+``the contents of boxed values from context $\Delta$ may be accessed in the future context $\Gamma$,''
+as will become apparent upon seeing the generalized $\Box$-elimination rule.
+In this paper,
+we use that concept to formulate a single parametric calculus generalizing these four calculi.
+
+\begin{figure}
+  \begin{align*}
+    &\inferrule[$\lambda_\text{IK}$/\Box-Elim]
+    {\Gamma \vdash t : \Box A}
+    {\Gamma, \Gamma' \vdash \unbox_{\lambda_\text{IK}} t : A}
+    \lock \notin \Gamma' &
+    &\inferrule[$\lambda_\text{IT}$/\Box-Elim]
+          {\Gamma \vdash t : \Box A}
+          {\Gamma, \Gamma' \vdash \unbox_{\lambda_\text{IT}} t : A}
+          \#_{\lock} (\Gamma') \le 1 \\
+          & \inferrule[$\lambda_\text{IK4}$/\Box-Elim]
+            {\Gamma \vdash t : \Box A}
+            {\Gamma, \lock, \Gamma' \vdash \unbox_{\lambda_\text{IK4}} t : A} &
+            & \inferrule[$\lambda_\text{IS4}$/\Box-Elim]
+            {\Gamma \vdash t : \Box A}
+            {\Gamma, \Gamma' \vdash \unbox_{\lambda_\text{IS4}} t : A}
+  \end{align*}
+  \caption{$\Box$-elimination rules for the modal lambda calculi
+    $\lambda_\text{IK}$, $\lambda_\text{IT}$, $\lambda_\text{IK4}$ and $\lambda_\text{IS4}$
+    \cite{clouston18}.
+    \label{fig:elim-rules}}
+\end{figure}
+
+The results are being formalized\footnote{Available online at
+\url{https://github.com/axelf4/pfm-lambda}.}
+in the proof assistant Agda \cite{norell07}.
+
+\section{The calculus $\lambda_\text{PFM}$}
+
+In this section we give the specification of the simply typed modal lambda calculus $\lambda_\text{PFM}$.
+The calculus is parameterized by the binary relation $\Delta\lhd\Gamma$ on contexts,
+subject to requirements that will be given below.
+
+Types are constructed out of an uninterpreted base type $\iota$:
+$$ \text{\emph{Type}} \quad A, B \Coloneqq \iota \mid A \rightarrow B \mid \Box A $$
+Contexts are lists of types and locks:
+$$ \text{\emph{Context}} \quad \Gamma \Coloneqq \cdot \mid \Gamma, A \mid \Gamma, \lock $$
+The intrinsically typed syntax of the language is given in figure~\ref{fig:typing-rules},
+where $\Gamma \vdash t : A$ is notation for $t$ being a well-typed term of type $T$ in context $\Gamma$.
+
+\begin{figure}
+  \centering
+  \begin{align*}
+    &\inferrule[Var]{ }{\Gamma, x : A, \Gamma' \vdash x : A} \, \lock \notin \Gamma' &
+    &\inferrule[\rightarrow-Intro]{\Gamma, A \vdash t : B}{\Gamma \vdash \lambda t : A \rightarrow B} &
+    &\inferrule[\rightarrow-Elim]{\Gamma \vdash t : A \rightarrow B \\ \Gamma \vdash s : A}{\Gamma \vdash t \, s : B}
+  \end{align*}
+  \begin{align*}
+    &\inferrule[\Box-Intro]{\Gamma, \lock \vdash t : A}{\Gamma \vdash \operatorname{box} t : \Box A} &
+    &\inferrule[\Box-Elim]{\Delta \vdash t : A \\ \Delta \lhd \Gamma}{\Gamma \vdash \operatorname{unbox} t : A}
+  \end{align*}
+  \caption{The set of intrinsically typed terms of $\lambda_\text{PFM}$.
+    The modal accessibility relation $\Delta\lhd\Gamma$ is a parameter of the calculus.
+    \label{fig:typing-rules}}
+\end{figure}
+
+In order to present the equational theory
+we define OPE:s and substitutions.
+An \emph{order-preserving embedding} (OPE) is a binary relation on contexts $\Gamma \subseteq \Delta$
+signifying $\Gamma$ can be weakened, i.e. add more assumptions,
+to obtain $\Delta$.
+It is defined inductively as
+\begin{equation*}
+  \inferrule{ }{\operatorname{base} : \cdot \subseteq \cdot} \quad
+  \inferrule{\Gamma \subseteq \Delta}{\operatorname{weak} : \Gamma \subseteq \Delta, A} \quad
+  \inferrule{\Gamma \subseteq \Delta}{\operatorname{lift} : \Gamma, A \subseteq \Delta, A} \quad
+  \inferrule{\Gamma \subseteq \Delta}{\operatorname{lift_\lock} : \Gamma, \lock \subseteq \Delta, \lock}
+\end{equation*}
+We define a map operation
+$\operatorname{wk} : \Gamma\subseteq\Delta \rightarrow \Gamma \vdash t : A \rightarrow \Delta \vdash t : A$
+that given an OPE weakens a term.
+Only the case of weakening an $\operatorname{unbox}$ term is unlike the simply typed lambda calculus (STLC) counterpart:
+\begin{lstlisting}[escapechar=\%,upquote=true]
+  wk w (unbox t m) = let m' , w' = rewind%$_\subseteq$% m w
+    in unbox (wk w' t) m'
+\end{lstlisting}
+where we require the calculus parameter
+$$ \textit{rewind}_\subseteq : (m : \Gamma'\lhd\Gamma) \rightarrow (w : \Gamma\subseteq\Delta) \rightarrow \exists \Delta'. \, \Delta'\lhd\Delta \times \Gamma'\subseteq\Delta' $$
+that given a modal accessibility relation $m$
+truncates the contexts $\Gamma$ and $\Delta$ in $w$,
+in order to remove as many locks from both as there are in $m$.
+That is to say, it transports $w$ from the future world $\Gamma$ to instead act on the past world $\Gamma'$.
+
+For substitutions - and later environments - we note that both
+can be seen as replacement lists of items for each type in a context.
+Thus we choose to define them as concrete instances of a type $\Rpl$,
+parametric over some function
+$F : \textit{Type} \rightarrow \textit{Context} \rightarrow \textbf{Set}$,
+defined inductively as
+\begin{equation*}
+  \inferrule{ }{\cdot : \Rpl \cdot \, \Delta} \quad
+  \inferrule{\sigma : \Rpl \Gamma \, \Delta \\ x : F \, A \, \Delta}
+            {\sigma, x : \Rpl \, (\Gamma, A) \, \Delta} \quad
+  \inferrule{\sigma : \Rpl \Gamma \, \Delta \\ m : \Delta\lhd\Delta'}
+            {\operatorname{lock} \sigma \, m : \Rpl \, (\Gamma, \lock) \, \Delta'}
+\end{equation*}
+This helps unify some of the calculus parameters,
+and avoids having the parameters depend on e.g. terms which in turn depend on other parameters.
+Substitutions $\operatorname{Sub}$ may then be defined as $\Rpl$ with $F \, A \, \Gamma = \Gamma \vdash A$.
+
+With the exception of the $\operatorname{lock}$ constructor
+the definition of $\Rpl$ is as for substitutions in STLC.
+Adding the alternate constructor
+$\operatorname{lift}_\lock : \Rpl \Gamma \, \Delta \rightarrow \Rpl \, (\Gamma, \lock) \, (\Delta, \lock)$
+it would be able to represent local substitutions in any of the ``worlds'' delimited by locks in the context.
+Instead, $\operatorname{lock}$ with an argument $m : \Delta\lhd\Delta'$
+(as used in \cite{valliappan22})
+makes it possible to unify substitutions and the necessary \emph{modal transformations},
+where locks are removed and added from contexts as permitted by $(\lhd)$.
+
+With this choice of $\operatorname{lock}$ we make use of the parameter
+$$ \lhd_\lock : \forall\Gamma. \, \Gamma \lhd \Gamma, \lock $$
+in order to be able to define the identity substitution
+$\operatorname{id}_s : \forall\Gamma. \, \operatorname{Sub} \Gamma \, \Gamma $
+
+As for OPE:s we define
+$subst : \operatorname{Rpl} \Gamma \, \Delta \rightarrow \Gamma \vdash t : A \rightarrow \Delta \vdash t : A$,
+using the parameter
+$$ \textit{rewind} : (m : \Gamma'\lhd\Gamma) \rightarrow (\sigma : \operatorname{Rpl} \Gamma \, \Delta) \rightarrow \exists \Delta'. \, \Delta'\lhd\Delta \times \operatorname{Rpl} \Gamma' \, \Delta' $$
+
+The equational theory of $\lambda_\text{PFM}$ is given in figure~\ref{fig:eq-theory},
+where reflexivity, symmetry, transitivity and congruence rules have been omitted.
+The notation $\Gamma \vdash t \sim s$ says that the terms $t$ and $s$
+are equal in the context $\Gamma$ up to the conversion relation $(\sim)$.
+
+\begin{figure}
+  \centering
+  \begin{align*}
+    \text{$\beta$ equivalence:}& \quad
+    \inferrule{\Gamma, A \vdash t : B \\ \Gamma \vdash s : A}{\Gamma \vdash (\lambda. \, t) \, s \sim t[s]} \quad
+    \inferrule{\Delta, \lock \vdash t : A \\ m : \Delta \lhd \Gamma}{\Gamma \vdash \unbox \, (\operatorname{box} t) \, m \sim \operatorname{subst} \, (\operatorname{lock} \operatorname{id}_s m) \, t} \\
+    \text{$\eta$ equivalence:}& \quad
+    \inferrule{\Gamma \vdash t : A \rightarrow B}
+         {\Gamma \vdash t \sim \lambda. \, (\operatorname{wk} \, (\operatorname{weak} \operatorname{id}_\subseteq) \, t) \, (\operatorname{var} \operatorname{zero})} \quad
+         \inferrule{\Gamma \vdash t : \Box A}{\Gamma \vdash t \sim \operatorname{box} \, (\operatorname{unbox} t \, \lhd_\lock)}
+  \end{align*}
+  \caption{Equational theory of $\lambda_\text{PFM}$.
+    The rules for lambda abstraction are as for STLC.
+    In the $\lambda$-$\beta$-conversion rule,
+    $t[s]$ denotes applying a singleton substitution to $t$:
+    Replacing the zeroth variable with $s$
+    and decrementing all other de Bruijn indices.
+    \label{fig:eq-theory}}
+\end{figure}
+
+\section{Normalization algorithm}
+
+We provide a NbE algorithm based on a possible worlds model.
+Normal and neutral forms are defined mutually as:
+\begin{gather*}
+  \inferrule{x : \text{Ne} \, \Gamma \, \iota}{\operatorname{ne} x : \text{Nf} \, \Gamma \, \iota} \quad
+  \inferrule{x : \text{Nf} \, (\Gamma, A) \, B}{\operatorname{abs} x : \text{Nf} \, \Gamma \, (A \rightarrow B)} \quad
+  \inferrule{x : \text{Nf} \, (\Gamma, \lock) \, A}{\operatorname{box} x : \text{Nf} \, \Gamma \, (\Box A)} \\
+  \inferrule{x : A \in \Gamma}{\operatorname{var} x : \text{Ne} \, \Gamma \, A} \quad
+  \inferrule{x : \text{Ne} \, \Gamma \, (A \rightarrow B) \\ y : \text{Nf} \, \Gamma \, A}
+            {x \, y : \text{Ne} \, \Gamma \, B} \quad
+  \inferrule{x : \text{Ne} \, \Gamma \, (\Box A) \\ m : \Gamma'\lhd\Gamma}{\operatorname{unbox} x \, m : \text{Ne} \, \Gamma \, A}
+\end{gather*}
+The normal forms are $\eta$-long, i.e. all variables are maximally applied and unboxed,
+as the $\operatorname{nf}$ constructor only permits neutral values of the base type.
+
+As done in \cite{valliappan22}, we choose contexts for worlds,
+weakenings for the intuitionistic accessibility relation between worlds, and
+$(\lhd)$ for the modal accessibility relation.
+(The intuitionistic accessibility relation should be thought of as
+relating two worlds $w_1$ and $w_2$ if $w_2$ has as much or more knowledge than $w_1$;
+for worlds as contexts this means all assumptions in $w_1$ should be present in $w_2$ too.)
+Then we interpret types in the model as
+\begin{align*}
+  &\llbracket \iota \rrbracket_\Gamma \coloneqq \text{Nf} \, \Gamma \, \iota \\
+  &\llbracket A \rightarrow B \rrbracket_\Gamma \coloneqq \forall \Delta. \, \Gamma \subseteq \Delta \rightarrow \llbracket A \rrbracket_\Delta \rightarrow \llbracket B \rrbracket_\Delta \\
+  &\llbracket \Box A \rrbracket_\Gamma \coloneqq \forall \Gamma', \Delta. \, \Gamma \subseteq \Gamma' \rightarrow \Gamma'\lhd\Delta \rightarrow \llbracket A \rrbracket_\Delta
+\end{align*}
+and contexts as environments, i.e. lists of semantic values, using $\operatorname{Rpl}$,
+$$ \llbracket \Gamma \rrbracket_\Delta \coloneqq \operatorname{Rpl}_{\llbracket\_\rrbracket} \Gamma \, \Delta $$
+We have monotonicity for semantic values and environments,
+i.e. we have
+$wk_A : \Delta \subseteq \Delta' \rightarrow \llbracket A \rrbracket_\Delta \rightarrow \llbracket A \rrbracket_\Delta'$ and
+$wk_\Gamma : \Delta \subseteq \Delta' \rightarrow \llbracket \Gamma \rrbracket_\Delta \rightarrow \llbracket \Gamma \rrbracket_\Delta'$.
+
+The definition of evaluation, reification and reflection is given in figure~\ref{fig:nbe}.
+The normalization function may then be given as
+\begin{align*}
+  &\textit{nf} : \Gamma \vdash t : A \rightarrow \operatorname{Nf} \Gamma \, A \\
+  &\textit{nf} \, t \coloneqq \, \downarrow^A (\llbracket t \rrbracket \operatorname{id}_e)
+\end{align*}
+where $\operatorname{id}_e$ is the identity environment.
+The algorithm can be summarized as follows:
+Evaluation proceeds as for an interpreter,
+except closures take an extra OPE argument;
+this allows conjuring fresh variables under binders
+when reifying functions.
+Then the resulting semantic value is reified back to its normal form.
+When reifying a box or function,
+evaluation proceeds with the boxed term,
+or the function applied to a neutral form corresponding to the argument type,
+respectively.
+
+\begin{figure}
+  \centering
+  \begin{align*}
+    &\text{Evaluation} \quad \llbracket\_\rrbracket &&: \Gamma \vdash t : A \rightarrow \forall\Delta. \, \llbracket\Gamma\rrbracket_\Delta \rightarrow \llbracket A \rrbracket_\Delta \\
+    &\llbracket x \rrbracket \, \hat\Gamma &&\coloneqq \text{lookup } x \text{ in } \hat\Gamma \\
+    &\llbracket \lambda. \, t \rrbracket \, \hat\Gamma \, w \, \hat a &&\coloneqq \llbracket t \rrbracket \, (\operatorname{wk}_{\hat\Gamma} w \, \hat\Gamma, \hat a) \\
+    &\llbracket t \, s \rrbracket \, \hat\Gamma &&\coloneqq \llbracket t \rrbracket \, \operatorname{id}_\subseteq \, (\llbracket s \rrbracket_{\hat\Gamma}) \\
+    &\llbracket \operatorname{box} t \rrbracket \, \hat\Gamma \, w \, m &&\coloneqq \llbracket t \rrbracket \, (\operatorname{lock} \, (\operatorname{wk}_{\hat\Gamma} w \, \hat\Gamma) \, m) \\
+    &\llbracket \operatorname{unbox} t \, m \rrbracket \, \hat\Gamma &&\coloneqq \llbracket t \rrbracket \, \hat\Delta \, \operatorname{id}_\subseteq m' \quad \text{where } m' , \hat\Delta = \textit{rewind} \, m \, \hat\Gamma \\
+    &\text{Reification} \quad \downarrow^A &&: \llbracket A \rrbracket_\Gamma \rightarrow \operatorname{Nf} \Gamma \, A \\
+    &\downarrow^\iota a &&\coloneqq a \\
+    &\downarrow^{A \rightarrow B} a &&\coloneqq \operatorname{abs} \, (\downarrow^B \, (a \, (\operatorname{weak} \operatorname{id}_\subseteq) \, (\uparrow^A (\operatorname{var} \operatorname{zero})))) \\
+    &\downarrow^{\Box A} a &&\coloneqq \operatorname{box} \, (\downarrow^A \, (a \, \operatorname{id}_\subseteq \lhd_\lock)) \\
+    &\text{Reflection} \quad \uparrow^A &&: \operatorname{Ne} \Gamma \, A \rightarrow \llbracket A \rrbracket_\Gamma \\
+    &\uparrow^\iota x &&\coloneqq \operatorname{nt} a \\
+    &\uparrow^{A \rightarrow B} x \, w \, a &&\coloneqq \, \uparrow^B ((\operatorname{wk}_{\operatorname{Ne}} w \, x) \, \downarrow^A a) \\
+    &\uparrow^{\Box A} x \, a &&\coloneqq \, \uparrow^B (\operatorname{unbox} \, (\operatorname{wk}_{\operatorname{Ne}} w \, x) \, m)
+  \end{align*}
+  \caption{Evaluation, reification and reflection definitions. \label{fig:nbe}}
+\end{figure}
+
+Here we have chosen the possible worlds inspired interpretation of $\Box A$,
+instead of the syntax-directed approach of
+$$ \llbracket \Box A \rrbracket_\Gamma = \llbracket A \rrbracket_{\Gamma, \lock}$$
+one reason being that the $\unbox$ case of evaluation then would require
+being able to apply the equivalent of a $\operatorname{lock} \operatorname{id} m$ substitution
+on semantic values, or similar, in addition to weakening,
+whereas currently no such thing is needed,
+as the $m$ instead goes directly in $\unbox$ when reflecting.
+
+\section{Completeness of the conversion relation}
+
+Completeness of the conversion relation has been proved with respect to possible worlds,
+with the addition of the following calculus parameters
+\begin{itemize}
+\item Rewinding $\operatorname{lock} \sigma \, m$
+  with a modal accessibility relation $\Gamma \lhd \Gamma, \lock$
+  should work as expected, i.e. give back $m$ and $\sigma$:
+  $$ \textit{rewind-$\lhd_\lock$} : \forall m, \sigma. \, \textit{rewind} \lhd_\lock (\operatorname{lock} \sigma \, m) \equiv m , \sigma $$
+  and the same for $\textit{rewind}_\subseteq$ on $\operatorname{lift_\lock}$.
+\item The operation $\textit{rewind}$ should preserve composition:
+  \begin{align*}
+    \textit{rewindPres-$\circ$} &: (m : \Delta\lhd\Gamma) \rightarrow (\sigma_1 : \operatorname{Rpl} \Gamma \, \Gamma') \rightarrow (\sigma_2 : \operatorname{Rpl} \Gamma' \, \Gamma'') \\
+    &\rightarrow
+    \begin{array}[t]{@{}l@{}l@{}}
+      \text{let } & m' , \sigma_1' = \textit{rewind} \, m \, \sigma_1 \\
+      & m'' , \sigma_2' = \textit{rewind} \, m' \, \sigma_2 \\
+      \text{in } & \textit{rewind} \, m \, (\sigma_1 \circ \sigma_2) \equiv m'' , \sigma_1' \circ \sigma_2'
+    \end{array}
+  \end{align*}
+  and likewise for $\textit{rewind}_\subseteq$.
+\item $\textit{rewind}$ should preserve identity:
+  $$ \textit{rewindPresId} : (m : \Delta\lhd\Gamma) \rightarrow \textit{rewind} \, m \, id \equiv m , id $$
+  and likewise for $\textit{rewind}_\subseteq$.
+\item $\textit{rewind}$ should commute with weakening and substitution composition:
+  \begin{align*}
+    &\textit{rewindWk} &&: (m : \Delta\lhd\Gamma) \rightarrow (\sigma : \operatorname{Rpl} \Gamma \, \Gamma') \rightarrow (w : \Gamma' \subseteq \Gamma'') \\
+    &&&\rightarrow
+    \begin{array}[t]{@{}l@{}l@{}}
+      \text{let } & m' , \sigma' = \textit{rewind} \, m \, \sigma \\
+      & m'' , w' = \textit{rewind}_\subseteq \, m' \, w \\
+      \text{in } & \textit{rewind} \, m \, (\textit{wk} \, w \, \sigma) \equiv m'' , \textit{wk} \, w' \, \sigma'
+    \end{array} \\
+    &\textit{rewindTrim} &&: (m : \Delta\lhd\Gamma) \rightarrow (w : \Gamma \subseteq \Gamma') \rightarrow (\sigma : \operatorname{Rpl} \Gamma' \, \Gamma'') \\
+    &&&\rightarrow
+    \begin{array}[t]{@{}l@{}l@{}}
+      \text{let } & m' , w' = \textit{rewind}_\subseteq \, m \, w \\
+      & m'' , \sigma' = \textit{rewind} \, m' \, \sigma \\
+      \text{in } & \textit{rewind} \, m \, (\textit{trim} \, w \, \sigma) \equiv m'' , \textit{trim} \, w' \, \sigma'
+    \end{array}
+  \end{align*}
+  where $\textit{wk} : \Delta\subseteq\Delta' \rightarrow \operatorname{Sub} \Gamma \, \Delta \rightarrow \operatorname{Sub} \Gamma \, \Delta'$ and
+  $\textit{trim} : \Gamma\subseteq\Gamma' \rightarrow \operatorname{Sub} \Gamma \, \Delta \rightarrow \operatorname{Sub} \Gamma' \, \Delta$
+  is substitution and weakening composition and vice versa, respectively.
+\end{itemize}
+These enable proving of the necessary weakening and substitution laws.
+Indeed, most show up in the goals when proving the $\unbox$ cases of the laws.
+
+\begin{theorem}[Completeness]
+  If $\Gamma \vdash t : A$, then $\Gamma \vdash t \sim \ulcorner \textit{nf} \, t \urcorner$.
+\end{theorem}
+
+The proof is standard,
+and established by a \emph{Kripke logical relation} \cite{kovacs17},
+$t \simeq a$, between terms and semantic terms,
+and $\sigma \simeq_\Gamma \hat\Gamma$, between substitutions and environments.
+The most interesting case of proving the fundamental theorem of the logical relations,
+i.e. $\sigma \simeq_\Gamma \delta \implies \operatorname{subst} \sigma \, t \simeq \llbracket t \rrbracket \, \delta$,
+is the $\unbox$ case
+where, to apply the induction hypothesis on the term to unbox,
+we need $\pi_2 (\textit{rewind} \, m \, \sigma) \simeq_\Gamma \pi_2 (\textit{rewind} \, m \, \delta)$,
+and a proof that $\pi_1 (\textit{rewind} \, m \, \sigma) \equiv \pi_1 (\textit{rewind} \, m \, \delta)$,
+where $\pi_1$, $\pi_2$ are the first and second projections of the product type.
+For now these will be most likely be calculus parameters directly.
+(Although, first defining $(\simeq_\Gamma)$ as an instance of a relation
+between any two $\operatorname{Rpl}$:s,
+to avoid having the parameters depend on $\operatorname{Sub}$ and $\operatorname{Env}$.)
+This has not yet been implemented in Agda.
+It should be noted that the equivalence holds a priori,
+as noted in \citetitle{wadler89} \cite{wadler89},
+since a $\textit{rewind}$ instantiation cannot observe
+the contents of the parametric $\operatorname{Rpl}$.
+That is hard to state in Agda though, to say the least.
+
+\section{Remaining work}
+
+It remains to prove soundness of the conversion relation,
+that is, if $\Gamma \vdash t : A$,
+then $t \sim s \implies \ulcorner \textit{nf} \, t \urcorner \equiv \ulcorner \textit{nf} \, s \urcorner$.
+This will be accomplished by generalizing to a presheaf model
+and proceeding along the same lines as in \cite{altenkirch95}.
+
+Another point is to investigate whether to replace OPE:s with renamings,
+i.e. substitutions where the replacement terms are variables.
+Not only would this remove
+the $\textit{rewind}_\subseteq$/$\textit{rewind}$ repetition,
+but it would also be a step toward being able to add the \emph{R axiom}
+($A \rightarrow \Box A$).
+\textcite{valliappan-r} showed that the condition
+$$ R_m \subseteq R_i $$
+on $R_i$ and $R_m$,
+the intuitionistic and modal accessibility relation, respectively,
+is sufficient for ensuring axiom R is satisfied in the model
+(with the IR \textsc{Var} rule and corresponding OPE definition).
+Unlike with OPE:s as given here,
+the condition holds when picking renamings for $R_i$,
+since renamings encapsulate lock weakenings.
+
+\printbibliography
+
+\end{document}
