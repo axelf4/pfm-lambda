@@ -337,50 +337,50 @@ wk-~ _ (cong-unbox x) = cong-unbox (wk-~ _ x)
 mutual
   -- Normal forms
   data _⊢nf_ (Γ : Ctx) : Ty -> Set where
-    nt : {A : Ty} -> Γ ⊢nt A -> Γ ⊢nf A
+    ne : Γ ⊢ne ι -> Γ ⊢nf ι
     abs : {A B : Ty} -> Γ , A ⊢nf B -> Γ ⊢nf A ⟶ B
     box : {A : Ty} -> Γ ,🔓 ⊢nf A -> Γ ⊢nf □ A
   -- Neutral terms
-  data _⊢nt_ (Γ : Ctx) : Ty -> Set where
-    var : {A : Ty} -> A ∈ Γ -> Γ ⊢nt A
-    app : {A B : Ty} -> Γ ⊢nt A ⟶ B -> Γ ⊢nf A -> Γ ⊢nt B
-    unbox : {A : Ty} {Γ' : Ctx} -> Γ' ⊢nt □ A -> Γ' ◁ Γ -> Γ ⊢nt A
+  data _⊢ne_ (Γ : Ctx) : Ty -> Set where
+    var : {A : Ty} -> A ∈ Γ -> Γ ⊢ne A
+    app : {A B : Ty} -> Γ ⊢ne A ⟶ B -> Γ ⊢nf A -> Γ ⊢ne B
+    unbox : {A : Ty} {Γ' : Ctx} -> Γ' ⊢ne □ A -> Γ' ◁ Γ -> Γ ⊢ne A
 
-infix 10 _⊢nf_ _⊢nt_
+infix 10 _⊢nf_ _⊢ne_
 
 -- Quotation of normal forms/neutrals back into terms
 ⌜_⌝nf : {Γ : Ctx} {A : Ty} -> Γ ⊢nf A -> Γ ⊢ A
-⌜_⌝nt : {Γ : Ctx} {A : Ty} -> Γ ⊢nt A -> Γ ⊢ A
-⌜ nt x ⌝nf = ⌜ x ⌝nt
+⌜_⌝ne : {Γ : Ctx} {A : Ty} -> Γ ⊢ne A -> Γ ⊢ A
+⌜ ne x ⌝nf = ⌜ x ⌝ne
 ⌜ abs x ⌝nf = abs ⌜ x ⌝nf
 ⌜ box x ⌝nf = box ⌜ x ⌝nf
 
-⌜ var x ⌝nt = var x
-⌜ app x y ⌝nt = app ⌜ x ⌝nt ⌜ y ⌝nf
-⌜ unbox x m ⌝nt = unbox ⌜ x ⌝nt m
+⌜ var x ⌝ne = var x
+⌜ app x y ⌝ne = app ⌜ x ⌝ne ⌜ y ⌝nf
+⌜ unbox x m ⌝ne = unbox ⌜ x ⌝ne m
 
 wkNf : {Γ Δ : Ctx} {A : Ty} -> Γ ⊆ Δ -> Γ ⊢nf A -> Δ ⊢nf A
-wkNt : {Γ Δ : Ctx} {A : Ty} -> Γ ⊆ Δ -> Γ ⊢nt A -> Δ ⊢nt A
-wkNf w (nt x) = nt (wkNt w x)
+wkNe : {Γ Δ : Ctx} {A : Ty} -> Γ ⊆ Δ -> Γ ⊢ne A -> Δ ⊢ne A
+wkNf w (ne x) = ne (wkNe w x)
 wkNf w (abs x) = abs (wkNf (lift w) x)
 wkNf w (box x) = box (wkNf (lift🔓 w) x)
 
-wkNt w (var x) = var (wkVar w x)
-wkNt w (app x y) = app (wkNt w x) (wkNf w y)
-wkNt w (unbox x m) = let _ , (m' , w') = rewind-⊆ m w
-  in unbox (wkNt w' x) m'
+wkNe w (var x) = var (wkVar w x)
+wkNe w (app x y) = app (wkNe w x) (wkNf w y)
+wkNe w (unbox x m) = let _ , (m' , w') = rewind-⊆ m w
+  in unbox (wkNe w' x) m'
 
 ⌜⌝nf-nat : {Γ Δ : Ctx} {A : Ty} -> (w : Γ ⊆ Δ) -> (n : Γ ⊢nf A)
   -> ⌜ wkNf w n ⌝nf ≡ wk w ⌜ n ⌝nf
-⌜⌝nt-nat : {Γ Δ : Ctx} {A : Ty} -> (w : Γ ⊆ Δ) -> (n : Γ ⊢nt A)
-  -> ⌜ wkNt w n ⌝nt ≡ wk w ⌜ n ⌝nt
-⌜⌝nf-nat w (nt x) = ⌜⌝nt-nat w x
+⌜⌝ne-nat : {Γ Δ : Ctx} {A : Ty} -> (w : Γ ⊆ Δ) -> (n : Γ ⊢ne A)
+  -> ⌜ wkNe w n ⌝ne ≡ wk w ⌜ n ⌝ne
+⌜⌝nf-nat w (ne x) = ⌜⌝ne-nat w x
 ⌜⌝nf-nat w (abs x) = cong abs (⌜⌝nf-nat (lift w) x)
 ⌜⌝nf-nat w (box x) = cong box (⌜⌝nf-nat (lift🔓 w) x)
 
-⌜⌝nt-nat w (var x) = refl
-⌜⌝nt-nat w (app x y) = cong₂ app (⌜⌝nt-nat w x) (⌜⌝nf-nat w y)
-⌜⌝nt-nat w (unbox x m) = cong1 unbox (⌜⌝nt-nat _ _)
+⌜⌝ne-nat w (var x) = refl
+⌜⌝ne-nat w (app x y) = cong₂ app (⌜⌝ne-nat w x) (⌜⌝nf-nat w y)
+⌜⌝ne-nat w (unbox x m) = cong1 unbox (⌜⌝ne-nat _ _)
 
 record Box' (A' : Ctx -> Set) (Γ : Ctx) : Set where
   constructor box'
@@ -399,13 +399,13 @@ wkTy' {A ⟶ B} w A⟶B' w2 A' = A⟶B' (w ● w2) A'
 wkTy' {□ A} w (box' f) = box' λ w2 -> f (w ● w2)
 
 reify : {A : Ty} {Γ : Ctx} -> ⟦ A ⟧ty Γ -> Γ ⊢nf A
-reflect : {A : Ty} {Γ : Ctx} -> Γ ⊢nt A -> ⟦ A ⟧ty Γ
+reflect : {A : Ty} {Γ : Ctx} -> Γ ⊢ne A -> ⟦ A ⟧ty Γ
 reify {ι} A' = A'
 reify {A ⟶ B} A⟶B' = abs (reify (A⟶B' (weak ⊆.id) (reflect (var zero))))
 reify {□ A} (box' f) = let A' = f ⊆.id ◁1 in box (reify A')
-reflect {ι} x = nt x
-reflect {A ⟶ B} x w A' = reflect (app (wkNt w x) (reify A'))
-reflect {□ A} x = box' λ w m -> reflect (unbox (wkNt w x) m)
+reflect {ι} x = ne x
+reflect {A ⟶ B} x w A' = reflect (app (wkNe w x) (reify A'))
+reflect {□ A} x = box' λ w m -> reflect (unbox (wkNe w x) m)
 
 -- Interpret context to a presheaf
 Env = Rpl ⟦_⟧ty
@@ -422,7 +422,7 @@ module Env = Rpl.Properties
     lookup : ∀ {A Γ Δ} -> A ∈ Γ -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
     lookup zero (_ , A') = A'
     lookup (suc x) (Γ' , _) = lookup x Γ'
-⟦ abs x ⟧tm Γ' e y' = ⟦ x ⟧tm (Env.wk e Γ' , y')
+⟦ abs x ⟧tm Γ' w y' = ⟦ x ⟧tm (Env.wk w Γ' , y')
 ⟦ app x y ⟧tm Γ' = ⟦ x ⟧tm Γ' ⊆.id (⟦ y ⟧tm Γ')
 ⟦ box x ⟧tm Γ' = box' λ w m -> ⟦ x ⟧tm (lock (Env.wk w Γ') m)
 ⟦_⟧tm (unbox x m) Γ' = let
@@ -534,7 +534,7 @@ fund (var (suc x)) (σ≈δ , _) = fund (var x) σ≈δ
 
 reify≈ : {A : Ty} {Γ : Ctx} {t : Γ ⊢ A} {t' : ⟦ A ⟧ty Γ}
   -> t ≈ t' -> t ~ ⌜ reify t' ⌝nf
-reflect≈ : {A : Ty} {Γ : Ctx} (t' : Γ ⊢nt A) -> ⌜ t' ⌝nt ≈ reflect t'
+reflect≈ : {A : Ty} {Γ : Ctx} (t' : Γ ⊢ne A) -> ⌜ t' ⌝ne ≈ reflect t'
 
 reify≈ {ι} t≈t' = t≈t'
 reify≈ {A ⟶ B} t≈t' = ~-trans (η _) (cong-abs (reify≈ (t≈t' (weak ⊆.id) (reflect≈ (var zero)))))
@@ -542,10 +542,10 @@ reify≈ {□ A} {t = t} t≈t' = ~-trans (□-η t) (cong-box (reify≈
   (≡.subst (λ x -> unbox x _ ≈ _) (wkId t) (t≈t' ⊆.id ◁1))))
 
 reflect≈ {ι} t' = ~-refl
-reflect≈ {A ⟶ A₁} t' w {a} {a'} a≈a' rewrite ≡.sym (⌜⌝nt-nat w t')
-  = cong-app ~-refl (reify≈ a≈a') ~◼≈ reflect≈ (app (wkNt w t') (reify a'))
-reflect≈ {□ A} t' w m rewrite ≡.sym (⌜⌝nt-nat w t')
-  = reflect≈ (unbox (wkNt w t') m)
+reflect≈ {A ⟶ A₁} t' w {a} {a'} a≈a' rewrite ≡.sym (⌜⌝ne-nat w t')
+  = cong-app ~-refl (reify≈ a≈a') ~◼≈ reflect≈ (app (wkNe w t') (reify a'))
+reflect≈ {□ A} t' w m rewrite ≡.sym (⌜⌝ne-nat w t')
+  = reflect≈ (unbox (wkNe w t') m)
 
 -- Completeness of the conversion relation
 complete : {Γ : Ctx} {A : Ty} (t : Γ ⊢ A) -> t ~ ⌜ nf t ⌝nf
