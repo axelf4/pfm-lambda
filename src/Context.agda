@@ -164,3 +164,13 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) (F : Ty -> Ctx -> Set) where
     (x , a) ∙ y = (x ∙ y) , apply y a
     lock x m ∙ y
       = let _ , (m' , y') = rewind m y in lock (x ∙ y') m'
+
+-- Relation between two Rpl:s
+data Rpl2 {_◁_ : Ctx -> Ctx -> Set} {F G : Ty -> Ctx -> Set}
+  (R : {A : Ty} {Γ : Ctx} -> F A Γ -> G A Γ -> Set)
+  {Δ : Ctx} : {Γ : Ctx} -> Replacement.Rpl _◁_ F Γ Δ -> Replacement.Rpl _◁_ G Γ Δ -> Set where
+  · : Rpl2 R Replacement.· Replacement.·
+  _,_ : {Γ : Ctx} {A : Ty} {σ : Replacement.Rpl _◁_ F Γ Δ} {δ : Replacement.Rpl _◁_ G Γ Δ} {x : F A Δ} {y : G A Δ}
+    -> Rpl2 R σ δ -> R x y -> Rpl2 R (σ Replacement., x) (δ Replacement., y)
+  lock : {Γ Δ' : Ctx} {σ : Replacement.Rpl _◁_ F Γ Δ'} {δ : Replacement.Rpl _◁_ G Γ Δ'}
+    -> Rpl2 R σ δ -> (m : Δ' ◁ Δ) -> Rpl2 R (Replacement.lock σ m) (Replacement.lock δ m)
