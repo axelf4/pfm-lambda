@@ -73,6 +73,14 @@ data Ext (🔓? : Set) (Γ : Ctx) : Ctx -> Set where
 LFExt = Ext ⊥
 {-# DISPLAY Ext ⊥ = LFExt #-}
 
+-- The proof of Ext is irrelevant as long as the contexts match up.
+-- (This is the special case of LFExts starting from a lock.)
+LFExtIsProp' : {Γ1 Γ2 Δ : Ctx} -> (m1 : LFExt (Γ1 ,🔓) Δ) (m2 : LFExt (Γ2 ,🔓) Δ)
+  -> Σ (Γ1 ≡ Γ2) λ p -> ≡.subst (λ Γ -> LFExt (Γ ,🔓) Δ) p m1 ≡ m2
+LFExtIsProp' nil nil = refl , refl
+LFExtIsProp' (snoc m1) (snoc m2) with LFExtIsProp' m1 m2
+... | refl , refl = refl , refl
+
 -- Order-preserving embedding (OPE).
 --
 -- For Γ ⊆ Δ, Δ is weaker than Γ since it has additional assumptions,
@@ -121,6 +129,15 @@ wkVarId : {A : Ty} {Γ : Ctx} -> (x : A ∈ Γ) -> wkVar ⊆.id x ≡ x
 wkVarId zero = refl
 wkVarId (suc x) = cong suc (wkVarId x)
 
+wkVarPres-● : {Γ Δ Ξ : Ctx} {A : Ty} -> (w1 : Γ ⊆ Δ) (w2 : Δ ⊆ Ξ) (x : A ∈ Γ)
+  -> wkVar (w1 ● w2) x ≡ wkVar w2 (wkVar w1 x)
+wkVarPres-● w1 (weak w2) x = cong suc (wkVarPres-● w1 w2 x)
+wkVarPres-● base base x = refl
+wkVarPres-● (weak w1) (lift w2) x = cong suc (wkVarPres-● w1 w2 x)
+wkVarPres-● (lift w1) (lift w2) zero = refl
+wkVarPres-● (lift w1) (lift w2) (suc x) = cong suc (wkVarPres-● w1 w2 x)
+wkVarPres-● (lift🔓 w1) (lift🔓 w2) ()
+
 module Replacement (_◁_ : Ctx -> Ctx -> Set) (F : Ty -> Ctx -> Set) where
   -- For every item in context Γ there is a replacement value in context Δ.
   data Rpl : Ctx -> Ctx -> Set where
@@ -150,10 +167,10 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) (F : Ty -> Ctx -> Set) where
     trim (lift w) (σ , x) = trim w σ , x
     trim (lift🔓 w) (lock σ m) = lock (trim w σ) m
 
-    drop : {Γ Δ : Ctx} {A : Ty} -> Rpl Γ Δ -> Rpl Γ (Δ , A)
+    drop : {A : Ty} {Γ Δ : Ctx} -> Rpl Γ Δ -> Rpl Γ (Δ , A)
     drop = wk (weak ⊆.id)
 
-    liftRpl : {Γ Δ : Ctx} {A : Ty} -> Rpl Γ Δ -> Rpl (Γ , A) (Δ , A)
+    liftRpl : {A : Ty} {Γ Δ : Ctx} -> Rpl Γ Δ -> Rpl (Γ , A) (Δ , A)
     liftRpl σ = drop σ , head
 
     id : {Γ : Ctx} -> Rpl Γ Γ

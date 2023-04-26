@@ -31,20 +31,21 @@ module _
     -> let _ , (m' , w1') = rewind-⊆ m w1
            _ , (m'' , w2') = rewind-⊆ m' w2
        in rewind-⊆ m (w1 ● w2) ≡ (_ , (m'' , (w1' ● w2'))))
-  (rewindPres-∙ : ∀ {F} {Δ Γ Γ' Γ'' : Ctx} (m : Δ ◁ Γ) (s1 : Rpl F Γ Γ') (s2 : Rpl F Γ' Γ'')
+  (rewindPres-∙ : ∀ {F} {Δ Γ Γ' Γ'' : Ctx} (m : Δ ◁ Γ) (σ : Rpl F Γ Γ') (δ : Rpl F Γ' Γ'')
     {apply : {A : Ty} {Γ Δ : Ctx} -> Rpl F Γ Δ -> F A Γ -> F A Δ}
     -> let open Rpl.Composition F rewind apply using (_∙_)
-           _ , (m' , s1') = rewind m s1
-           _ , (m'' , s2') = rewind m' s2
-       in rewind m (s1 ∙ s2) ≡ (_ , (m'' , (s1' ∙ s2'))))
+           _ , (m' , σ') = rewind m σ
+           _ , (m'' , δ') = rewind m' δ
+       in rewind m (σ ∙ δ) ≡ (_ , (m'' , (σ' ∙ δ'))))
 
   (rewind-⊆-presId : {Γ Δ : Ctx} -> (m : Δ ◁ Γ)
     -> rewind-⊆ m ⊆.id ≡ Δ , (m , ⊆.id))
   (rewindPresId : ∀ {F} {Γ Δ : Ctx} -> (m : Δ ◁ Γ)
     {wkF : {A : Ty} {Γ Γ' : Ctx} -> Γ ⊆ Γ' -> F A Γ -> F A Γ'}
     {head : {A : Ty} {Γ : Ctx} -> F A (Γ , A)}
-    -> let open Rpl.Properties F ◁1 rewind-⊆ wkF head using (id)
-       in rewind m id ≡ Δ , (m , id))
+    (let open Rpl.Properties F ◁1 rewind-⊆ wkF head using (id))
+    (wkFId : {A : Ty} {Γ : Ctx} (x : F A Γ) -> wkF ⊆.id x ≡ x)
+      -> rewind m id ≡ Δ , (m , id))
 
   -- Weakening a substitution works the same before and after rewinding
   (rewindWk : ∀ {F} {Γ Γ' Γ'' Δ : Ctx} (m : Δ ◁ Γ) (σ : Rpl F Γ Γ') (w : Γ' ⊆ Γ'')
@@ -123,15 +124,6 @@ wkId (unbox t m) = ≡.trans
 wkPres-● : ∀ {A Γ Δ Ξ} -> (w1 : Γ ⊆ Δ) (w2 : Δ ⊆ Ξ) (x : Γ ⊢ A)
   -> wk (w1 ● w2) x ≡ wk w2 (wk w1 x)
 wkPres-● {A} w1 w2 (var x) = cong var (wkVarPres-● w1 w2 x)
-  where
-    wkVarPres-● : ∀ {Γ Δ Ξ} -> (w1 : Γ ⊆ Δ) (w2 : Δ ⊆ Ξ) (x : A ∈ Γ)
-      -> wkVar (w1 ● w2) x ≡ wkVar w2 (wkVar w1 x)
-    wkVarPres-● w1 (weak w2) x = cong suc (wkVarPres-● w1 w2 x)
-    wkVarPres-● base base x = refl
-    wkVarPres-● (weak w1) (lift w2) x = cong suc (wkVarPres-● w1 w2 x)
-    wkVarPres-● (lift w1) (lift w2) zero = refl
-    wkVarPres-● (lift w1) (lift w2) (suc x) = cong suc (wkVarPres-● w1 w2 x)
-    wkVarPres-● (lift🔓 w1) (lift🔓 w2) ()
 wkPres-● w1 w2 (abs x) = cong abs (wkPres-● (lift w1) (lift w2) x)
 wkPres-● w1 w2 (app x y) = cong₂ app (wkPres-● w1 w2 x) (wkPres-● w1 w2 y)
 wkPres-● w1 w2 (box x) = cong box (wkPres-● (lift🔓 w1) (lift🔓 w2) x)
@@ -234,7 +226,7 @@ substId (abs x) = cong abs (substId x)
 substId (app x y) = cong₂ app (substId x) (substId y)
 substId (box x) = cong box (substId x)
 substId (unbox x m) = ≡.trans
-  (cong (λ (_ , (m' , σ')) -> unbox (subst σ' x) m') (rewindPresId m))
+  (cong (λ (_ , (m' , σ')) -> unbox (subst σ' x) m') (rewindPresId m wkId))
   (cong1 unbox (substId x))
 
 open Rpl.Composition (λ A Δ -> Δ ⊢ A) rewind subst using (_∙_)
@@ -243,7 +235,7 @@ idrSub : {Γ Δ : Ctx} {σ : Sub Γ Δ} -> σ ∙ Sub.id ≡ σ
 idrSub {σ = ·} = refl
 idrSub {σ = σ , x} = cong₂ _,_ idrSub (substId x)
 idrSub {σ = lock σ m} = ≡.trans
-  (cong (λ (_ , (m' , σ')) -> lock (σ ∙ σ') m') (rewindPresId m))
+  (cong (λ (_ , (m' , σ')) -> lock (σ ∙ σ') m') (rewindPresId m wkId))
   (cong1 lock idrSub)
 
 -- See: coh-wkSub-∙ₛ
