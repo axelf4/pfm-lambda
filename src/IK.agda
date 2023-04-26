@@ -7,6 +7,7 @@ open import Agda.Builtin.Sigma using (Σ; fst; snd) renaming (_,_ to infix 20 _,
 open import Axiom.UniquenessOfIdentityProofs using (module Decidable⇒UIP)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl; cong; cong₂)
 open import Data.Product using (_×_)
+
 open import Context
 open import Util using (cong1; subst-application'; Σ×-≡,≡,≡→≡)
 
@@ -16,7 +17,7 @@ _◁_ : Ctx -> Ctx -> Set
 ◁1 : {Γ : Ctx} -> Γ ◁ (Γ ,🔓)
 ◁1 = nil
 
-open module Rpl = Replacement _◁_
+open module Rpl = Replacement _◁_ using (Rpl; ·; _,_; lock)
 
 rewind-⊆ : {Γ Γ' Δ : Ctx}
   -> (m : Γ' ◁ Γ) -> (w : Γ ⊆ Δ)
@@ -150,15 +151,3 @@ rewindCommMap f (snoc m) (s , x) = rewindCommMap f m s
 rewindCommMap f nil (lock s m) with fst (LFExtIsProp' m m)
 ... | eq with Decidable⇒UIP.≡-irrelevant _≡Ctx?_ eq refl
 ... | refl = refl
-
-open import Main
-  _◁_ ◁1
-  rewind-⊆ rewind
-  rewind-⊆-◁1 rewind-◁1
-  rewind-⊆-pres-● rewindPres-∙
-  rewind-⊆-presId rewindPresId
-  rewindWk rewindTrim
-  rewindFree rewindCommMap
-  public
-
-x = nf {· , ι} (app (abs (var zero)) (var zero))
