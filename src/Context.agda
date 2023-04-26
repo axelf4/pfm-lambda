@@ -3,7 +3,7 @@
 module Context where
 
 open import Agda.Builtin.Sigma using (Σ; snd) renaming (_,_ to infix 20 _,_)
-open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl; cong)
+open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl; cong; cong₂)
 open import Data.Empty using (⊥)
 open import Data.Product using (_×_)
 
@@ -17,11 +17,46 @@ data Ty : Set where
 infixr 30 _⟶_
 infix 30 □_
 
+open import Relation.Nullary using (yes; no)
+open import Relation.Binary.Definitions using (DecidableEquality)
+
+_≡Ty?_ : DecidableEquality Ty
+ι ≡Ty? ι = yes refl
+ι ≡Ty? (_ ⟶ _) = no λ ()
+ι ≡Ty? (□ _) = no λ ()
+(_ ⟶ _) ≡Ty? ι = no λ ()
+(A1 ⟶ B1) ≡Ty? (A2 ⟶ B2) with A1 ≡Ty? A2 | B1 ≡Ty? B2
+... | yes A1≡A2 | yes B1≡B2 = yes (cong₂ _⟶_ A1≡A2 B1≡B2)
+... | yes A1≡A2 | no ¬B1≡B2 = no (λ { refl → ¬B1≡B2 refl })
+... | no ¬A1≡A2 | q = no (λ { refl → ¬A1≡A2 refl })
+(_ ⟶ _) ≡Ty? (□ _) = no λ ()
+(□ _) ≡Ty? ι = no λ ()
+(□ _) ≡Ty? (_ ⟶ _) = no λ ()
+(□ A) ≡Ty? (□ B) with A ≡Ty? B
+... | yes A≡B = yes (cong □_ A≡B)
+... | no ¬A≡B = no λ { refl → ¬A≡B refl }
+
 -- Typing context
 data Ctx : Set where
   · : Ctx
   _,_ : (Γ : Ctx) -> (A : Ty) -> Ctx
   _,🔓 : (Γ : Ctx) -> Ctx
+
+_≡Ctx?_ : DecidableEquality Ctx
+· ≡Ctx? · = yes refl
+· ≡Ctx? (_ , _) = no λ ()
+· ≡Ctx? (_ ,🔓) = no λ ()
+(_ , _) ≡Ctx? · = no λ ()
+(Γ , A) ≡Ctx? (Δ , B) with Γ ≡Ctx? Δ | A ≡Ty? B
+... | yes Γ≡Δ | yes A≡B = yes (cong₂ _,_ Γ≡Δ A≡B)
+... | yes Γ≡Δ | no ¬A≡B = no λ { refl → ¬A≡B refl }
+... | no ¬Γ≡Δ | _ = no λ { refl → ¬Γ≡Δ refl }
+(G , A) ≡Ctx? (C ,🔓) = no λ ()
+(_ ,🔓) ≡Ctx? · = no λ ()
+(_ ,🔓) ≡Ctx? (_ , _) = no λ ()
+(Γ ,🔓) ≡Ctx? (Δ ,🔓) with Γ ≡Ctx? Δ
+... | yes Γ≡Δ = yes (cong _,🔓 Γ≡Δ)
+... | no ¬Γ≡Δ = no λ { refl → ¬Γ≡Δ refl }
 
 -- The type A can be found in the context at index n.
 data _∈_ (A : Ty) : Ctx -> Set where
