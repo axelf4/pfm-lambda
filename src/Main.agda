@@ -6,7 +6,7 @@ open ≡.≡-Reasoning
 open import Data.Product using (_×_)
 open import Data.Nat using (ℕ; zero; suc)
 
-open import Util using (cong1; dcong₄; subst-application'')
+open import Util using (cong1; dcong₃)
 open import Context
 
 module _
@@ -15,7 +15,7 @@ module _
   (_◁_ : Ctx -> Ctx -> Set)
   (◁1 : {Γ : Ctx} -> Γ ◁ (Γ ,🔓))
   (let module Rpl = Replacement _◁_)
-  (let Rpl = Rpl.Rpl) (let Rpl2 = Rpl2 {_◁_})
+  (let Rpl = Rpl.Rpl)
   -- Trim OPE:s and substitutions/environments
   (rewind-⊆ : {Γ Γ' Δ : Ctx} -> (m : Γ' ◁ Γ) -> Γ ⊆ Δ
     -> Σ Ctx λ Δ' -> Δ' ◁ Δ × Γ' ⊆ Δ')
@@ -70,11 +70,13 @@ module _
            Δ'' , (m'' , _) = rewind m δ
        in Σ (Δ' ≡ Δ'') λ p -> ≡.subst (_◁ Δ) p m' ≡ m'')
 
-  (rewind2 : ∀ {Γ Γ' Δ : Ctx} {F G : Ty -> Ctx -> Set} {R : {A : Ty} {Γ : Ctx} -> F A Γ -> G A Γ -> Set}
-    {σ : Rpl F Γ Δ} {δ : Rpl G Γ Δ} -> (m : Γ' ◁ Γ) -> Rpl2 R σ δ
-    -> Rpl2 R
-      (snd (snd (rewind m σ)))
-      (≡.subst (Rpl G Γ') (fst (rewindFree m δ σ)) (snd (snd (rewind m δ)))))
+  (rewindCommMap : {F G : Ty -> Ctx -> Set} {Γ Γ' Δ : Ctx}
+    -> (f : {A : Ty} {Γ : Ctx} -> F A Γ -> G A Γ)
+    -> (m : Γ' ◁ Γ) -> (σ : Replacement.Rpl _◁_ F Γ Δ)
+    -> let σ' = mapRpl f σ
+           _ , (_ , δ) = rewind m σ
+           _ , (_ , δ') = rewind m σ'
+       in mapRpl f δ ≡ ≡.subst (Rpl G Γ') (fst (rewindFree m σ' σ)) δ')
   where
 
 open Rpl using (·; _,_; lock)
@@ -458,73 +460,11 @@ _≈_ {A ⟶ B} {Γ} x x' = {Δ : Ctx} -> (w : Γ ⊆ Δ)
 _≈_ {□ A} {Γ} x x' = {Γ' Δ : Ctx} -> (w : Γ ⊆ Γ') -> (m : Γ' ◁ Δ)
   -> unbox (wk w x) m ≈ Box'.unbox' x' w m
 
-_≈ctx_ = Rpl2 {F = λ A Γ -> Γ ⊢ A} {G = ⟦_⟧ty} _≈_
-
-wk-≈ : {A : Ty} {Γ Δ : Ctx} {x : Γ ⊢ A} {x' : ⟦ A ⟧ty Γ}
-  -> (w : Γ ⊆ Δ) -> x ≈ x' -> wk w x ≈ wkTy' w x'
-wk-≈ {ι} {x' = x'} w x≈x'
-  = ≡.subst (_ ~_) (≡.sym (⌜⌝nf-nat w x')) (wk-~ w x≈x')
-wk-≈ {A ⟶ B} {x = x} w x≈x' w2 rewrite ≡.sym (wkPres-● w w2 x) = x≈x' (w ● w2)
-wk-≈ {□ A} {x = x} w x≈x' w2 rewrite ≡.sym (wkPres-● w w2 x) = x≈x' (w ● w2)
-
-wk-≈ctx : {Γ Δ Δ' : Ctx} {σ : Sub Γ Δ} {δ : Env Γ Δ}
-  -> (w : Δ ⊆ Δ') -> σ ≈ctx δ -> Sub.wk w σ ≈ctx Env.wk w δ
-wk-≈ctx w · = ·
-wk-≈ctx w (x , t≈t') = wk-≈ctx w x , wk-≈ w t≈t'
-wk-≈ctx w (lock x m) = let _ , (m' , w') = rewind-⊆ m w
-  in lock (wk-≈ctx w' x) m'
-
 -- Transitivity between ~ and ≈ (≈-cons/-prepend)
 _~◼≈_ : ∀ {A Γ t s} {t' : ⟦ A ⟧ty Γ} -> t ~ s -> s ≈ t' -> t ≈ t'
 _~◼≈_ {ι} p q = ~-trans p q
 _~◼≈_ {A ⟶ B} p q w a≈a' = cong-app (wk-~ w p) ~-refl ~◼≈ q w a≈a'
 _~◼≈_ {□ A} p q w m = cong-unbox (wk-~ w p) ~◼≈ q w m
-
-fund : {A : Ty} {Γ Δ : Ctx} (t : Γ ⊢ A) {σ : Sub Γ Δ} {δ : ⟦ Γ ⟧ctx Δ}
-  -> σ ≈ctx δ -> subst σ t ≈ ⟦ t ⟧tm δ
-fund (abs t) {σ} σ≈δ w {a} {a'} a≈a' = ≡.subst
-  (app (abs (wk (lift w) (subst (Sub.liftRpl σ) t))) a ~_)
-  (≡.trans (≡.sym (cohTrimWk (lift w) (Sub.id , a) (subst _ t)))
-    (≡.trans (≡.sym (substPres-∙ (Sub.liftRpl σ) (Sub.trim w Sub.id , a) t))
-      (cong (λ x -> subst (x , a) t)
-        (≡.trans (assocSWS σ (weak ⊆.id) (Sub.trim w Sub.id , a))
-          (≡.trans (cong (σ ∙_) (Sub.trimIdl _))
-            (≡.trans (≡.sym (assocSWS σ w Sub.id)) idrSub))))))
-  (β (wk (lift w) (subst (Sub.liftRpl σ) t)) a)
-  ~◼≈ fund t (wk-≈ctx w σ≈δ , a≈a')
-fund (app t s) {σ} σ≈δ rewrite ≡.sym (wkId (subst σ t))
-  = fund t σ≈δ ⊆.id (fund s σ≈δ)
-fund (box t) {σ} σ≈δ w m = ≡.subst
-  (unbox (wk w (subst σ (box t))) m ~_)
-  (begin
-    subst (lock Sub.id m) (wk (lift🔓 w) (subst (lock σ ◁1) t))
-    ≡˘⟨ cong (subst _) (substNat (lift🔓 w) _ t) ⟩
-    subst (lock Sub.id m) (subst (Sub.wk (lift🔓 w) (lock σ ◁1)) t)
-    ≡⟨ cong (λ (_ , (m' , w')) -> subst (lock Sub.id m) (subst (lock (Sub.wk w' σ) m') t))
-      (rewind-⊆-◁1 w) ⟩
-    subst (lock Sub.id m) (subst (lock (Sub.wk w σ) ◁1) t)
-    ≡˘⟨ substPres-∙ (lock (Sub.wk w σ) ◁1) (lock Sub.id m) t ⟩
-    subst (lock (Sub.wk w σ) ◁1 ∙ lock Sub.id m) t
-    ≡⟨ cong (λ (_ , (m' , δ)) -> subst (lock ((Sub.wk w σ) ∙ δ) m') t)
-      (rewind-◁1 _) ⟩
-    subst (lock (Sub.wk w σ ∙ Sub.id) m) t
-    ≡⟨ cong (λ x -> subst (lock x m) t) idrSub ⟩
-    subst (lock (Sub.wk w σ) m) t ∎)
-  (□-β (wk (lift🔓 w) (subst (lock σ ◁1) t)) m)
-  ~◼≈ fund t (lock (wk-≈ctx w σ≈δ) m)
-fund (unbox t m) {σ} {δ} σ≈δ rewrite ≡.sym (wkId (subst (snd (snd (rewind m σ))) t))
-  = ≡.subst
-    (unbox (wk ⊆.id (subst (snd (snd (rewind m σ))) t)) (fst (snd (rewind m σ))) ≈_)
-    (≡.sym (dcong₄
-      (λ Ξ Ξ' w m -> let box' f = ⟦ t ⟧tm {Ξ} Ξ' in f w m)
-      (fst (rewindFree m δ σ))
-      refl
-      (subst-application'' ⊆.id (fst (rewindFree m δ σ)))
-      (snd (rewindFree m δ σ))))
-    (fund t (rewind2 m σ≈δ) ⊆.id (fst (snd (rewind m σ))))
--- Lookup witnesses for variables in σ≈δ
-fund (var zero) (σ≈δ , a≈a') = a≈a'
-fund (var (suc x)) (σ≈δ , _) = fund (var x) σ≈δ
 
 reify≈ : {A : Ty} {Γ : Ctx} {t : Γ ⊢ A} {t' : ⟦ A ⟧ty Γ}
   -> t ≈ t' -> t ~ ⌜ reify t' ⌝nf
@@ -541,11 +481,111 @@ reflect≈ {A ⟶ A₁} t' w {a} {a'} a≈a' rewrite ≡.sym (⌜⌝ne-nat w t')
 reflect≈ {□ A} t' w m rewrite ≡.sym (⌜⌝ne-nat w t')
   = reflect≈ (unbox (wkNe w t') m)
 
+record A≈A' (A : Ty) (Γ : Ctx) : Set where
+  field
+    t : Γ ⊢ A
+    t' : ⟦ A ⟧ty Γ
+    t≈t' : t ≈ t'
+
+wk-≈ : {A : Ty} {Γ Δ : Ctx} {x : Γ ⊢ A} {x' : ⟦ A ⟧ty Γ}
+  -> (w : Γ ⊆ Δ) -> x ≈ x' -> wk w x ≈ wkTy' w x'
+wk-≈ {ι} {x' = x'} w x≈x'
+  = ≡.subst (_ ~_) (≡.sym (⌜⌝nf-nat w x')) (wk-~ w x≈x')
+wk-≈ {A ⟶ B} {x = x} w x≈x' w2 rewrite ≡.sym (wkPres-● w w2 x) = x≈x' (w ● w2)
+wk-≈ {□ A} {x = x} w x≈x' w2 rewrite ≡.sym (wkPres-● w w2 x) = x≈x' (w ● w2)
+
+wk-A≈A' : {A : Ty} {Γ Δ : Ctx} -> (w : Γ ⊆ Δ) -> A≈A' A Γ -> A≈A' A Δ
+wk-A≈A' w record { t = t ; t' = t' ; t≈t' = t≈t' } = record
+  { t = wk w t; t' = wkTy' w t'; t≈t' = wk-≈ w t≈t' }
+
+Ctx≈ = Rpl A≈A'
+module Ctx≈ where
+  open module Props = Rpl.Properties A≈A' ◁1 rewind-⊆ wk-A≈A'
+    record { t = var zero; t' = reflect (var zero); t≈t' = reflect≈ (var zero) }
+    public
+
+  toSub : {Γ Δ : Ctx} -> Ctx≈ Γ Δ -> Sub Γ Δ
+  toSub = mapRpl A≈A'.t
+  toEnv : {Γ Δ : Ctx} -> Ctx≈ Γ Δ -> Env Γ Δ
+  toEnv = mapRpl A≈A'.t'
+
+  toSubWk : {Γ Δ Δ' : Ctx} (σ≈δ : Ctx≈ Γ Δ) {w : Δ ⊆ Δ'} -> toSub (Props.wk w σ≈δ) ≡ Sub.wk w (toSub σ≈δ)
+  toSubWk · = refl
+  toSubWk (r , x) = cong (_, _) (toSubWk r)
+  toSubWk (lock r m) = cong1 lock (toSubWk r)
+  toEnvWk : {Γ Δ Δ' : Ctx} (σ≈δ : Ctx≈ Γ Δ) {w : Δ ⊆ Δ'} -> toEnv (Props.wk w σ≈δ) ≡ Env.wk w (toEnv σ≈δ)
+  toEnvWk · = refl
+  toEnvWk (r , x) = cong (_, _) (toEnvWk r)
+  toEnvWk (lock r m) = cong1 lock (toEnvWk r)
+
+  toSubId : {Γ : Ctx} -> toSub Props.id ≡ Sub.id {Γ}
+  toSubId {·} = refl
+  toSubId {Γ , A} = cong1 _,_ (≡.trans (toSubWk Props.id {weak ⊆.id})
+    (cong (Sub.wk _) toSubId))
+  toSubId {Γ ,🔓} = cong1 lock toSubId
+
+  toEnvId : {Γ : Ctx} -> toEnv Props.id ≡ Env.id {Γ}
+  toEnvId {·} = refl
+  toEnvId {Γ , A} = cong1 _,_ (≡.trans (toEnvWk Props.id {weak ⊆.id})
+    (cong (Env.wk _) toEnvId))
+  toEnvId {Γ ,🔓} = cong1 lock toEnvId
+
+fund : {A : Ty} {Γ Δ : Ctx} (t : Γ ⊢ A) -> (σ≈δ : Ctx≈ Γ Δ) -> let
+  σ = Ctx≈.toSub σ≈δ
+  δ = Ctx≈.toEnv σ≈δ
+  in subst σ t ≈ ⟦ t ⟧tm δ
+fund (abs t) σ≈δ w {a} {a'} a≈a' = ≡.subst
+  (app (abs (wk (lift w) (subst (Sub.liftRpl σ) t))) a ~_)
+  (≡.trans (≡.sym (cohTrimWk (lift w) (Sub.id , a) (subst _ t)))
+    (≡.trans (≡.sym (substPres-∙ (Sub.liftRpl σ) (Sub.trim w Sub.id , a) t))
+      (cong (λ x -> subst (x , a) t)
+        (≡.trans (assocSWS σ (weak ⊆.id) (Sub.trim w Sub.id , a))
+          (≡.trans (cong (σ ∙_) (Sub.trimIdl _))
+            (≡.trans (≡.sym (assocSWS σ w Sub.id)) idrSub))))))
+  (β (wk (lift w) (subst (Sub.liftRpl σ) t)) a)
+  ~◼≈ ≡.subst₂ (λ p q -> subst (p , a) t ≈ ⟦ t ⟧tm (q , a')) (Ctx≈.toSubWk σ≈δ) (Ctx≈.toEnvWk σ≈δ) ih
+  where
+    σ = Ctx≈.toSub σ≈δ
+    ih = fund t (Ctx≈.wk w σ≈δ , record { t = a; t' = a'; t≈t' = a≈a' })
+fund (app t s) σ≈δ rewrite ≡.sym (wkId (subst (Ctx≈.toSub σ≈δ) t))
+  = fund t σ≈δ ⊆.id (fund s σ≈δ)
+fund (box t) σ≈δ w m = ≡.subst
+  (unbox (wk w (subst σ (box t))) m ~_)
+  (begin
+    subst (lock Sub.id m) (wk (lift🔓 w) (subst (lock σ ◁1) t))
+    ≡˘⟨ cong (subst _) (substNat (lift🔓 w) _ t) ⟩
+    subst (lock Sub.id m) (subst (Sub.wk (lift🔓 w) (lock σ ◁1)) t)
+    ≡⟨ cong (λ (_ , (m' , w')) -> subst (lock Sub.id m) (subst (lock (Sub.wk w' σ) m') t))
+      (rewind-⊆-◁1 w) ⟩
+    subst (lock Sub.id m) (subst (lock (Sub.wk w σ) ◁1) t)
+    ≡˘⟨ substPres-∙ (lock (Sub.wk w σ) ◁1) (lock Sub.id m) t ⟩
+    subst (lock (Sub.wk w σ) ◁1 ∙ lock Sub.id m) t
+    ≡⟨ cong (λ (_ , (m' , δ)) -> subst (lock ((Sub.wk w σ) ∙ δ) m') t)
+      (rewind-◁1 _) ⟩
+    subst (lock (Sub.wk w σ ∙ Sub.id) m) t
+    ≡⟨ cong (λ x -> subst (lock x m) t) idrSub ⟩
+    subst (lock (Sub.wk w σ) m) t ∎)
+  (□-β (wk (lift🔓 w) (subst (lock σ ◁1) t)) m)
+  ~◼≈ ≡.subst₂ (λ p q -> subst (lock p m) t ≈ ⟦ t ⟧tm (lock q m)) (Ctx≈.toSubWk σ≈δ) (Ctx≈.toEnvWk σ≈δ) ih
+  where
+    σ = Ctx≈.toSub σ≈δ
+    ih = fund t (lock (Ctx≈.wk w σ≈δ) m)
+fund (unbox t m) σ≈δ rewrite ≡.sym (wkId (subst (snd (snd (rewind m (Ctx≈.toSub σ≈δ)))) t))
+  = let
+    Ξ≡Ξ'1 , m≡m'1 = rewindFree m (Ctx≈.toSub σ≈δ) σ≈δ
+    Ξ≡Ξ'2 , m≡m'2 = rewindFree m (Ctx≈.toEnv σ≈δ) σ≈δ
+  in ≡.subst₂ (_≈_)
+    (≡.sym (dcong₃ (λ _Ξ Ξ' m -> unbox (wk ⊆.id (subst Ξ' t)) m)
+      Ξ≡Ξ'1 (≡.sym (rewindCommMap A≈A'.t  m σ≈δ)) m≡m'1))
+    (≡.sym (dcong₃ (λ Ξ Ξ' m -> ⟦ t ⟧tm {Ξ} Ξ' .Box'.unbox' ⊆.id m)
+      Ξ≡Ξ'2 (≡.sym (rewindCommMap A≈A'.t' m σ≈δ)) m≡m'2))
+    (fund t (snd (snd (rewind m σ≈δ))) ⊆.id (fst (snd (rewind m σ≈δ))))
+-- Lookup witnesses for variables in σ≈δ
+fund (var zero) (σ≈δ , record { t≈t' = a≈a' }) = a≈a'
+fund (var (suc x)) (σ≈δ , _) = fund (var x) σ≈δ
+
 -- Completeness of the conversion relation
 complete : {Γ : Ctx} {A : Ty} (t : Γ ⊢ A) -> t ~ ⌜ nf t ⌝nf
-complete t = ≡.subst (_~ ⌜ reify (⟦ t ⟧tm Env.id) ⌝nf) (substId t) (reify≈ (fund t ≈ctx-id))
-  where
-    ≈ctx-id : {Γ : Ctx} -> Sub.id {Γ} ≈ctx Env.id
-    ≈ctx-id {·} = ·
-    ≈ctx-id {Γ , A} = wk-≈ctx (weak ⊆.id) ≈ctx-id , reflect≈ (var zero)
-    ≈ctx-id {Γ ,🔓} = lock ≈ctx-id ◁1
+complete t = ≡.subst (_~ ⌜ reify (⟦ t ⟧tm Env.id) ⌝nf) (substId t) (reify≈
+  (≡.subst₂ (λ σ δ -> subst σ t ≈ ⟦ t ⟧tm δ) Ctx≈.toSubId Ctx≈.toEnvId
+    (fund t Ctx≈.id)))
