@@ -1,17 +1,27 @@
-{-# OPTIONS --without-K --safe #-}
+{-# OPTIONS --without-K #-}
 
 open import Parameters as _ using (Parameters)
 
 module Calculus (params : Parameters) where
 
 open import Agda.Builtin.Sigma using (Σ; fst; snd) renaming (_,_ to infix 20 _,_)
+open import Level using (0ℓ)
+open import Axiom.Extensionality.Propositional using (Extensionality; implicit-extensionality)
+open import Axiom.UniquenessOfIdentityProofs using (UIP)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl; cong; cong₂)
+open import Function using (_∘_; _$_; Inverse)
+open import Data.Product.Properties using (Σ-≡,≡↔≡)
 
 open import Util using (cong1)
 open import Context
 
 open Parameters params
 open Replacement _◁_ using (Rpl; ·; _,_; lock)
+
+postulate
+  funext : Extensionality 0ℓ 0ℓ
+
+funexti = implicit-extensionality funext
 
 --- Syntax
 
@@ -56,18 +66,17 @@ wkId (unbox t m) = ≡.trans
 
 wkPres-● : ∀ {A Γ Δ Ξ} -> (w1 : Γ ⊆ Δ) (w2 : Δ ⊆ Ξ) (x : Γ ⊢ A)
   -> wk (w1 ● w2) x ≡ wk w2 (wk w1 x)
-wkPres-● {A} w1 w2 (var x) = cong var (wkVarPres-● w1 w2 x)
+wkPres-● w1 w2 (var x) = cong var (wkVarPres-● w1 w2 x)
 wkPres-● w1 w2 (abs x) = cong abs (wkPres-● (lift w1) (lift w2) x)
 wkPres-● w1 w2 (app x y) = cong₂ app (wkPres-● w1 w2 x) (wkPres-● w1 w2 y)
 wkPres-● w1 w2 (box x) = cong box (wkPres-● (lift🔓 w1) (lift🔓 w2) x)
 wkPres-● w1 w2 (unbox x m) = ≡.trans
   (cong (λ (_ , (m' , w')) -> unbox (wk w' x) m') (rewind-⊆-pres-● m w1 w2))
-  (cong1 unbox (wkPres-● _ _ _))
+  (cong1 unbox (wkPres-● _ _ x))
 
 -- Substitution from variables in context Γ to terms in context Δ
 Sub = Rpl (λ A Δ -> Δ ⊢ A)
-module Sub = Rpl.Properties
-  (λ A Δ -> Δ ⊢ A)
+module Sub = Rpl.Properties (λ A Δ -> Δ ⊢ A)
   ◁1 rewind-⊆
   wk (var zero)
 
@@ -87,14 +96,7 @@ subst σ (unbox x m) = let _ , (m' , σ') = rewind m σ
 _[_] : {Γ : Ctx} {A B : Ty} -> Γ , B ⊢ A -> Γ ⊢ B -> Γ ⊢ A
 _[_] x y = subst (Sub.id , y) x
 
-wkSubPres-● : {Γ Δ Δ' Δ'' : Ctx} (w : Δ ⊆ Δ') (w' : Δ' ⊆ Δ'') (σ : Sub Γ Δ)
-  -> Sub.wk (w ● w') σ ≡ Sub.wk w' (Sub.wk w σ)
-wkSubPres-● w w' · = refl
-wkSubPres-● w w' (s , x) = cong₂ _,_ (wkSubPres-● w w' s) (wkPres-● w w' x)
-wkSubPres-● w w' (lock s m) = ≡.trans
-  (cong (λ (_ , (m' , w'')) -> lock (Sub.wk w'' s) m')
-    (rewind-⊆-pres-● m w w'))
-  (cong1 lock (wkSubPres-● _ _ s))
+wkSubPres-● = Sub.wkPres-● rewind-⊆-pres-● wkPres-●
 
 wkSubId : {Γ Δ : Ctx} -> (w : Γ ⊆ Δ) -> Sub.wk w Sub.id ≡ Sub.from-⊆ w
 wkSubId base = refl
@@ -313,6 +315,19 @@ wkNe w (app x y) = app (wkNe w x) (wkNf w y)
 wkNe w (unbox x m) = let _ , (m' , w') = rewind-⊆ m w
   in unbox (wkNe w' x) m'
 
+wkNfPres-● : ∀ {A Γ Δ Ξ} -> (w1 : Γ ⊆ Δ) (w2 : Δ ⊆ Ξ) (x : Γ ⊢nf A)
+  -> wkNf (w1 ● w2) x ≡ wkNf w2 (wkNf w1 x)
+wkNePres-● : ∀ {A Γ Δ Ξ} -> (w1 : Γ ⊆ Δ) (w2 : Δ ⊆ Ξ) (x : Γ ⊢ne A)
+  -> wkNe (w1 ● w2) x ≡ wkNe w2 (wkNe w1 x)
+wkNfPres-● w1 w2 (ne x) = cong ne (wkNePres-● w1 w2 x)
+wkNfPres-● w1 w2 (abs x) = cong abs (wkNfPres-● (lift w1) (lift w2) x)
+wkNfPres-● w1 w2 (box x) = cong box (wkNfPres-● (lift🔓 w1) (lift🔓 w2) x)
+wkNePres-● w1 w2 (var x) = cong var (wkVarPres-● w1 w2 x)
+wkNePres-● w1 w2 (app x y) = cong₂ app (wkNePres-● w1 w2 x) (wkNfPres-● w1 w2 y)
+wkNePres-● w1 w2 (unbox x m) = ≡.trans
+  (cong (λ (_ , (m' , w')) -> unbox (wkNe w' x) m') (rewind-⊆-pres-● m w1 w2))
+  (cong1 unbox (wkNePres-● _ _ x))
+
 ⌜⌝nf-nat : {Γ Δ : Ctx} {A : Ty} -> (w : Γ ⊆ Δ) -> (n : Γ ⊢nf A)
   -> ⌜ wkNf w n ⌝nf ≡ wk w ⌜ n ⌝nf
 ⌜⌝ne-nat : {Γ Δ : Ctx} {A : Ty} -> (w : Γ ⊆ Δ) -> (n : Γ ⊢ne A)
@@ -325,51 +340,151 @@ wkNe w (unbox x m) = let _ , (m' , w') = rewind-⊆ m w
 ⌜⌝ne-nat w (app x y) = cong₂ app (⌜⌝ne-nat w x) (⌜⌝nf-nat w y)
 ⌜⌝ne-nat w (unbox x m) = cong1 unbox (⌜⌝ne-nat _ _)
 
-record Box' (A' : Ctx -> Set) (Γ : Ctx) : Set where
+record Box' (A' : Ctx -> Set) {wkA' : {Γ Δ : Ctx} (w : Γ ⊆ Δ) -> A' Γ -> A' Δ} (Γ : Ctx) : Set where
   constructor box'
   field
     unbox' : {Γ' Δ : Ctx} ->  Γ ⊆ Γ' -> Γ' ◁ Δ -> A' Δ
+    natural : {Γ' Δ Δ' : Ctx} (w : Γ ⊆ Γ') (m : Γ' ◁ Δ) (w' : Δ ⊆ Δ')
+      -> let _ , (m' , w'') = rewind-⊆ m w'
+         in unbox' (w ● w'') m' ≡ wkA' w' (unbox' w m)
 
 -- Interpret a type to a presheaf
 ⟦_⟧ty : Ty -> Ctx -> Set
-⟦ ι ⟧ty Γ = Γ ⊢nf ι
-⟦ A ⟶ B ⟧ty Γ = {Δ : Ctx} -> Γ ⊆ Δ -> ⟦ A ⟧ty Δ -> ⟦ B ⟧ty Δ
-⟦ □ A ⟧ty Γ = Box' ⟦ A ⟧ty Γ
-
 wkTy' : {A : Ty} {Γ Δ : Ctx} -> Γ ⊆ Δ -> ⟦ A ⟧ty Γ -> ⟦ A ⟧ty Δ
+
+⟦ ι ⟧ty Γ = Γ ⊢nf ι
+⟦ A ⟶ B ⟧ty Γ = Σ ({Δ : Ctx} -> Γ ⊆ Δ -> ⟦ A ⟧ty Δ -> ⟦ B ⟧ty Δ) λ f
+  -> {Δ Ξ : Ctx} (w : Γ ⊆ Δ) (w' : Δ ⊆ Ξ) (a' : ⟦ A ⟧ty Δ)
+  -> f (w ● w') (wkTy' w' a') ≡ wkTy' w' (f w a')
+⟦ □ A ⟧ty Γ = Box' ⟦ A ⟧ty {wkTy' {A}} Γ
+
 wkTy' {ι} w = wkNf w
-wkTy' {A ⟶ B} w A⟶B' w2 = A⟶B' (w ● w2)
-wkTy' {□ A} w (box' f) = box' λ w2 -> f (w ● w2)
+wkTy' {A ⟶ B} w (t' , t'-nat) = (λ w' -> t' (w ● w'))
+  , λ w' w'' a' -> ≡.trans (cong1 t' (≡.sym (●-assoc w w' w''))) (t'-nat (w ● w') w'' a')
+wkTy' {□ A} w (box' t' t'-nat) = box' (λ w' -> t' (w ● w'))
+  λ w2 m w3 -> ≡.trans (cong1 t' (≡.sym (●-assoc w w2 _))) (t'-nat (w ● w2) m w3)
+
+postulate
+  Ty'UIP : {A : Ty} {Γ : Ctx} -> UIP (⟦ A ⟧ty Γ)
+
+⟶'≡ : {A B : Ty} {Γ : Ctx} {f f' : ⟦ A ⟶ B ⟧ty Γ}
+  -> ({Δ : Ctx} (w : Γ ⊆ Δ) (a' : ⟦ A ⟧ty Δ) -> fst f w a' ≡ fst f' w a')
+  -> f ≡ f'
+⟶'≡ {f = f} {f'} eq = Σ-≡,≡↔≡ .Inverse.f
+  (funexti (funext λ w -> funext λ a' -> eq w a')
+    , funexti (funexti (funext (λ w -> funext λ w' -> funext λ a' -> Ty'UIP _ _))))
+
+□'≡ : {A : Ty} {Γ : Ctx} {b b' : ⟦ □ A ⟧ty Γ}
+  -> ({Γ' Δ : Ctx} (w : Γ ⊆ Γ') (m : Γ' ◁ Δ) -> Box'.unbox' b w m ≡ Box'.unbox' b' w m)
+  -> b ≡ b'
+□'≡ {b = b} {b'} eq = to
+  (funext λ tt -> funexti (funexti (funext λ w -> funext λ m -> eq w m)))
+  (funext λ tt -> funexti (funexti (funexti (funext (λ w -> funext λ m -> funext λ w' -> Ty'UIP _ _))))) 
+  where
+    open import Data.Unit using (⊤; tt)
+
+    -- TODO This doesn't work since Agda eagerly applies the implicits...
+    -- to : {A : Ty} {Γ : Ctx} {x1@(box' a1 b1) x2@(box' a2 b2) : ⟦ □ A ⟧ty Γ}
+    --   -> (p : a1 ≡ a2) -> ≡.subst (λ unbox' -> _) p b1 ≡ b2 -> x1 ≡ x2
+
+    to : {A : Ty} {Γ : Ctx}
+      {a1 a2 : ⊤ -> {Γ' Δ : Ctx} -> Γ ⊆ Γ' -> Γ' ◁ Δ -> ⟦ A ⟧ty Δ}
+      {b1 : ⊤ -> {Γ' Δ Δ' : Ctx} (w : Γ ⊆ Γ') (m : Γ' ◁ Δ) (w' : Δ ⊆ Δ')
+      -> let _ , (m' , w'') = rewind-⊆ m w'
+         in a1 tt (w ● w'') m' ≡ wkTy' w' (a1 tt w m)}
+      {b2 : ⊤ -> {Γ' Δ Δ' : Ctx} (w : Γ ⊆ Γ') (m : Γ' ◁ Δ) (w' : Δ ⊆ Δ')
+        -> let _ , (m' , w'') = rewind-⊆ m w'
+           in a2 tt (w ● w'') m' ≡ wkTy' w' (a2 tt w m)}
+      -> (p : a1 ≡ a2)
+      -> ≡.subst (λ unbox' -> _) p b1 ≡ b2
+      -> box' {wkA' = wkTy'} (a1 tt) (b1 tt) ≡ box' (a2 tt) (b2 tt)
+    to refl refl = refl
+
+wkTy'Pres-● : {A : Ty} {Γ Δ Ξ : Ctx} (w1 : Γ ⊆ Δ) (w2 : Δ ⊆ Ξ) (t' : ⟦ A ⟧ty Γ)
+  -> wkTy' (w1 ● w2) t' ≡ wkTy' w2 (wkTy' w1 t')
+wkTy'Pres-● {ι} w1 w2 t' = wkNfPres-● w1 w2 t'
+wkTy'Pres-● {A ⟶ B} w1 w2 (t' , _) = ⟶'≡ λ w a' -> cong1 t' (●-assoc w1 w2 w)
+wkTy'Pres-● {□ A} w1 w2 t' = □'≡ λ w _m -> cong1 (Box'.unbox' t') (●-assoc w1 w2 w)
 
 reify : {A : Ty} {Γ : Ctx} -> ⟦ A ⟧ty Γ -> Γ ⊢nf A
+reifyNat : {A : Ty} {Γ Δ : Ctx} (w : Γ ⊆ Δ) (t' : ⟦ A ⟧ty Γ)
+  -> wkNf w (reify t') ≡ reify (wkTy' w t')
 reflect : {A : Ty} {Γ : Ctx} -> Γ ⊢ne A -> ⟦ A ⟧ty Γ
+reflectNat : {A : Ty} {Γ Δ : Ctx} (w : Γ ⊆ Δ) (x : Γ ⊢ne A)
+  -> wkTy' w (reflect x) ≡ reflect (wkNe w x)
+
 reify {ι} A' = A'
-reify {A ⟶ B} A⟶B' = abs (reify (A⟶B' (weak ⊆.id) (reflect (var zero))))
-reify {□ A} (box' f) = let A' = f ⊆.id ◁1 in box (reify A')
+reify {A ⟶ B} (A⟶B' , _) = abs (reify (A⟶B' (weak ⊆.id) (reflect (var zero))))
+reify {□ A} (box' f nat) = let A' = f ⊆.id ◁1 in box (reify A')
+reifyNat {ι} w t' = refl
+reifyNat {A ⟶ B} w (t' , t'-nat) = cong abs (≡.trans
+  (reifyNat (lift w) (t' (weak ⊆.id) (reflect (var zero))))
+  (cong reify (≡.trans
+    (≡.sym (t'-nat (weak ⊆.id) (lift w) (reflect (var zero))))
+    (cong₂ _$_ (cong (t' ∘ weak) (≡.trans ⊆.idl  (≡.sym ⊆.idr)))
+      (reflectNat (lift w) (var zero))))))
+reifyNat {□ A} w (box' t' t'-nat) = cong box (≡.trans
+  (reifyNat (lift🔓 w) (t' ⊆.id ◁1))
+  (cong reify (≡.trans
+    (≡.sym (t'-nat ⊆.id ◁1 (lift🔓 w)))
+    (≡.trans (cong (λ (_ , (m' , w')) -> t' (⊆.id ● w') m') (rewind-⊆-◁1 w))
+      (cong1 t' (≡.trans ⊆.idl (≡.sym ⊆.idr)))))))
+
 reflect {ι} x = ne x
-reflect {A ⟶ B} x w A' = reflect (app (wkNe w x) (reify A'))
-reflect {□ A} x = box' λ w m -> reflect (unbox (wkNe w x) m)
+reflect {A ⟶ B} x = (λ w a' -> reflect (app (wkNe w x) (reify a')))
+  , λ w w' a' -> ≡.trans (cong₂ _$_ (cong (λ x y -> reflect (app x y)) (wkNePres-● w w' x)) (≡.sym (reifyNat w' a')))
+    (≡.sym (reflectNat w' (app (wkNe w x) (reify a'))))
+reflect {□ A} x = box' (λ w m -> reflect (unbox (wkNe w x) m))
+  λ w m w' -> ≡.trans (cong reflect (cong1 unbox (wkNePres-● w _ x)))
+    (≡.sym (reflectNat w' (unbox (wkNe w x) m)))
+reflectNat {ι} w x = refl
+reflectNat {A ⟶ B} w x = ⟶'≡ λ w' _a' -> cong reflect (cong1 app (wkNePres-● w w' x))
+reflectNat {□ A} w x = □'≡ λ w' m -> cong reflect (cong1 unbox (wkNePres-● w w' x))
 
 -- Interpret context to a presheaf
 Env = Rpl ⟦_⟧ty
 ⟦_⟧ctx = Env
-module Env = Rpl.Properties
-  ⟦_⟧ty
+module Env = Rpl.Properties ⟦_⟧ty
   ◁1 rewind-⊆
   wkTy' (reflect (var zero))
 
+wkEnvPres-● = Env.wkPres-● rewind-⊆-pres-● wkTy'Pres-●
+
+lookup : {A : Ty} {Γ Δ : Ctx} -> A ∈ Γ -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
+lookup zero (_ , A') = A'
+lookup (suc x) (Γ' , _) = lookup x Γ'
+
 -- Interpret terms-in-contexts as natural transformations
 ⟦_⟧tm : {Γ : Ctx} {A : Ty} -> Γ ⊢ A -> {Δ : Ctx} -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
+⟦_⟧tm-nat : {A : Ty} {Γ Δ Ξ : Ctx} (t : Γ ⊢ A) (w : Δ ⊆ Ξ) (Γ' : ⟦ Γ ⟧ctx Δ)
+  -> ⟦ t ⟧tm (Env.wk w Γ') ≡ wkTy' w (⟦ t ⟧tm Γ')
 ⟦ var A∈Γ ⟧tm Γ' = lookup A∈Γ Γ'
-  where
-    lookup : ∀ {A Γ Δ} -> A ∈ Γ -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
-    lookup zero (_ , A') = A'
-    lookup (suc x) (Γ' , _) = lookup x Γ'
-⟦ abs x ⟧tm Γ' w y' = ⟦ x ⟧tm (Env.wk w Γ' , y')
-⟦ app x y ⟧tm Γ' = ⟦ x ⟧tm Γ' ⊆.id (⟦ y ⟧tm Γ')
-⟦ box x ⟧tm Γ' = box' λ w m -> ⟦ x ⟧tm (lock (Env.wk w Γ') m)
+⟦ abs x ⟧tm Γ' = (λ w y' -> ⟦ x ⟧tm (Env.wk w Γ' , y'))
+  , λ w w' y' -> ≡.trans (cong (λ Γ' -> ⟦ x ⟧tm (Γ' , wkTy' w' y')) (wkEnvPres-● w w' Γ'))
+    (⟦ x ⟧tm-nat w' (Env.wk w Γ' , y'))
+⟦ app x y ⟧tm Γ' = ⟦ x ⟧tm Γ' .fst ⊆.id (⟦ y ⟧tm Γ')
+⟦ box x ⟧tm Γ' = box' (λ w m -> ⟦ x ⟧tm (lock (Env.wk w Γ') m))
+  λ w m w' -> ≡.trans (cong (λ Γ' -> ⟦ x ⟧tm (lock Γ' _)) (wkEnvPres-● w _ Γ'))
+    (⟦ x ⟧tm-nat w' (lock (Env.wk w Γ') m))
 ⟦_⟧tm (unbox x m) Γ' = let _ , (m' , Δ') = rewind m Γ'
   in ⟦ x ⟧tm Δ' .Box'.unbox' ⊆.id m'
+
+⟦ abs t ⟧tm-nat w Γ' = ⟶'≡ λ w' a' -> cong ⟦ t ⟧tm (cong1 _,_ (≡.sym (wkEnvPres-● w w' Γ')))
+⟦ app t s ⟧tm-nat w Γ' rewrite ⟦ t ⟧tm-nat w Γ' | ⟦ s ⟧tm-nat w Γ' = ≡.trans
+  (cong1 (fst (⟦ t ⟧tm Γ')) (≡.trans (⊆.idr) (≡.sym ⊆.idl)))
+  (⟦ t ⟧tm Γ' .snd ⊆.id w (⟦ s ⟧tm Γ'))
+⟦ box t ⟧tm-nat w Γ' = □'≡ λ w' m -> cong ⟦ t ⟧tm (cong1 lock (≡.sym (wkEnvPres-● w w' Γ')))
+⟦ unbox t m ⟧tm-nat w Γ' rewrite
+    rewindWk m Γ' w {wkF = wkTy'} {head = reflect (var zero)}
+  | let
+      _ , (m' , Δ') = rewind m Γ'
+      _ , (m'' , w') = rewind-⊆ m' w
+    in ⟦ t ⟧tm-nat w' Δ' = let _ , (m' , Δ') = rewind m Γ'
+  in ≡.trans
+    (cong1 (Box'.unbox' (⟦ t ⟧tm _)) (≡.trans ⊆.idr (≡.sym ⊆.idl)))
+    (⟦ t ⟧tm Δ' .Box'.natural ⊆.id m' w)
+⟦ var zero ⟧tm-nat w (_ , _) = refl
+⟦ var (suc x) ⟧tm-nat w (Γ' , _) = ⟦ var x ⟧tm-nat w Γ'
 
 -- Normalization function
 nf : {Γ : Ctx} {A : Ty} -> Γ ⊢ A -> Γ ⊢nf A

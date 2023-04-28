@@ -1,4 +1,4 @@
-{-# OPTIONS --without-K --safe #-}
+{-# OPTIONS --without-K #-}
 
 open import Parameters as _ using (Parameters)
 
@@ -21,7 +21,7 @@ _≈_ : {A : Ty} {Γ : Ctx} -> Γ ⊢ A -> ⟦ A ⟧ty Γ -> Set
 _≈_ {ι} x x' = x ~ ⌜ x' ⌝nf
 _≈_ {A ⟶ B} {Γ} x x' = {Δ : Ctx} -> (w : Γ ⊆ Δ)
   -> {a : Δ ⊢ A} {a' : ⟦ A ⟧ty Δ}
-  -> a ≈ a' -> app (wk w x) a ≈ x' w a'
+  -> a ≈ a' -> app (wk w x) a ≈ fst x' w a'
 _≈_ {□ A} {Γ} x x' = {Γ' Δ : Ctx} -> (w : Γ ⊆ Γ') -> (m : Γ' ◁ Δ)
   -> unbox (wk w x) m ≈ Box'.unbox' x' w m
 

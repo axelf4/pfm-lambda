@@ -3,6 +3,8 @@
 module Context where
 
 open import Agda.Builtin.Sigma using (Σ; snd) renaming (_,_ to infix 20 _,_)
+open import Relation.Nullary using (yes; no)
+open import Relation.Binary.Definitions using (DecidableEquality)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl; cong; cong₂)
 open import Data.Empty using (⊥)
 open import Data.Product using (_×_)
@@ -16,9 +18,6 @@ data Ty : Set where
 
 infixr 30 _⟶_
 infix 30 □_
-
-open import Relation.Nullary using (yes; no)
-open import Relation.Binary.Definitions using (DecidableEquality)
 
 _≡Ty?_ : DecidableEquality Ty
 ι ≡Ty? ι = yes refl
@@ -100,6 +99,15 @@ x ● (weak y) = weak (x ● y)
 (weak x) ● (lift y) = weak (x ● y)
 (lift x) ● (lift y) = lift (x ● y)
 (lift🔓 x) ● (lift🔓 y) = lift🔓 (x ● y)
+
+●-assoc : {Γ1 Γ2 Γ3 Γ4 : Ctx} (w1 : Γ1 ⊆ Γ2) (w2 : Γ2 ⊆ Γ3) (w3 : Γ3 ⊆ Γ4)
+  -> (w1 ● w2) ● w3 ≡ w1 ● (w2 ● w3)
+●-assoc w1 w2 base = refl
+●-assoc w1 w2 (weak w3) = cong weak (●-assoc w1 w2 w3)
+●-assoc w1 (weak w2) (lift w3) = cong weak (●-assoc w1 w2 w3)
+●-assoc (weak w1) (lift w2) (lift w3) = cong weak (●-assoc w1 w2 w3)
+●-assoc (lift w1) (lift w2) (lift w3) = cong lift (●-assoc w1 w2 w3)
+●-assoc (lift🔓 w1) (lift🔓 w2) (lift🔓 w3) = cong lift🔓 (●-assoc w1 w2 w3)
 
 module ⊆ where
   id : {Γ : Ctx} -> Γ ⊆ Γ
@@ -205,6 +213,22 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) (F : Ty -> Ctx -> Set) where
       (≡.sym (trimNat w (weak ⊆.id) id))
       (cong drop (trimIdr w)))
     trimIdr (lift🔓 w) = cong1 lock (trimIdr w)
+
+    module _
+      (rewind-⊆-pres-● : {Δ Γ Γ' Γ'' : Ctx} (m : Δ ◁ Γ) (w1 : Γ ⊆ Γ') (w2 : Γ' ⊆ Γ'')
+        -> let _ , (m' , w1') = rewind-⊆ m w1
+               _ , (m'' , w2') = rewind-⊆ m' w2
+           in rewind-⊆ m (w1 ● w2) ≡ (_ , (m'' , (w1' ● w2'))))
+      (wkFPres-● : {A : Ty} {Γ Δ Ξ : Ctx} (w : Γ ⊆ Δ) (w' : Δ ⊆ Ξ) (x : F A Γ)
+        -> wkF (w ● w') x ≡ wkF w' (wkF w x))
+      where
+      wkPres-● : {Γ Δ Δ' Δ'' : Ctx} (w : Δ ⊆ Δ') (w' : Δ' ⊆ Δ'') (σ : Rpl Γ Δ)
+        -> wk (w ● w') σ ≡ wk w' (wk w σ)
+      wkPres-● w w' · = refl
+      wkPres-● w w' (s , x) = cong₂ _,_ (wkPres-● w w' s) (wkFPres-● w w' x)
+      wkPres-● w w' (lock s m) = ≡.trans
+        (cong (λ (_ , (m' , w'')) -> lock (wk w'' s) m') (rewind-⊆-pres-● m w w'))
+        (cong1 lock (wkPres-● _ _ s))
 
   module Composition
     (rewind : {Γ Γ' Δ : Ctx} -> (m : Γ' ◁ Γ) -> Rpl Γ Δ
