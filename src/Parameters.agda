@@ -31,9 +31,9 @@ record Parameters : Set1 where
       -> let _ , (m' , w1') = rewind-⊆ m w1
              _ , (m'' , w2') = rewind-⊆ m' w2
          in rewind-⊆ m (w1 ● w2) ≡ (_ , (m'' , (w1' ● w2')))
-    rewindPres-∙ : ∀ {F} {Δ Γ Γ' Γ'' : Ctx} (m : Δ ◁ Γ) (σ : Rpl F Γ Γ') (δ : Rpl F Γ' Γ'')
-      {apply : {A : Ty} {Γ Δ : Ctx} -> Rpl F Γ Δ -> F A Γ -> F A Δ}
-      -> let open Rpl.Composition F rewind apply using (_∙_)
+    rewindPres-∙ : ∀ {F G} {Δ Γ Γ' Γ'' : Ctx} (m : Δ ◁ Γ) (σ : Rpl F Γ Γ') (δ : Rpl G Γ' Γ'')
+      {apply : {A : Ty} {Γ Δ : Ctx} -> Rpl G Γ Δ -> F A Γ -> G A Δ}
+      -> let open Rpl.Composition F G rewind apply using (_∙_)
              _ , (m' , σ') = rewind m σ
              _ , (m'' , δ') = rewind m' δ
          in rewind m (σ ∙ δ) ≡ (_ , (m'' , (σ' ∙ δ')))
@@ -73,8 +73,8 @@ record Parameters : Set1 where
   
     rewindCommMap : {F G : Ty -> Ctx -> Set} {Γ Γ' Δ : Ctx}
       -> (f : {A : Ty} {Γ : Ctx} -> F A Γ -> G A Γ)
-      -> (m : Γ' ◁ Γ) -> (σ : Replacement.Rpl _◁_ F Γ Δ)
-      -> let σ' = mapRpl f σ
-             _ , (_ , δ) = rewind m σ
-             _ , (_ , δ') = rewind m σ'
-         in mapRpl f δ ≡ ≡.subst (Rpl G Γ') (fst (rewindFree m σ' σ)) δ'
+      -> (m : Γ' ◁ Γ) -> (σ : Rpl F Γ Δ)
+      -> let σ' = Rpl.map f σ
+         in Rpl.map f (snd (snd (rewind m σ)))
+           ≡ ≡.subst (Rpl G Γ') (fst (rewindFree m σ' σ))
+           (snd (snd (rewind m σ')))

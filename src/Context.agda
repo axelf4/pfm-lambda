@@ -146,14 +146,21 @@ wkVarPres-● (lift w1) (lift w2) zero = refl
 wkVarPres-● (lift w1) (lift w2) (suc x) = cong suc (wkVarPres-● w1 w2 x)
 wkVarPres-● (lift🔓 w1) (lift🔓 w2) ()
 
-module Replacement (_◁_ : Ctx -> Ctx -> Set) (F : Ty -> Ctx -> Set) where
+module Replacement (_◁_ : Ctx -> Ctx -> Set) where
   -- For every item in context Γ there is a replacement value in context Δ.
-  data Rpl : Ctx -> Ctx -> Set where
-    · : {Δ : Ctx} -> Rpl · Δ
-    _,_ : {Γ Δ : Ctx} {A : Ty} -> Rpl Γ Δ -> F A Δ -> Rpl (Γ , A) Δ
-    lock : {Γ Δ Δ' : Ctx} -> Rpl Γ Δ -> Δ ◁ Δ' -> Rpl (Γ ,🔓) Δ'
+  data Rpl (F : Ty -> Ctx -> Set) : Ctx -> Ctx -> Set where
+    · : {Δ : Ctx} -> Rpl F · Δ
+    _,_ : {Γ Δ : Ctx} {A : Ty} -> Rpl F Γ Δ -> F A Δ -> Rpl F (Γ , A) Δ
+    lock : {Γ Δ Δ' : Ctx} -> Rpl F Γ Δ -> Δ ◁ Δ' -> Rpl F (Γ ,🔓) Δ'
+
+  map : {F G : Ty -> Ctx -> Set} -> ({A : Ty} {Γ : Ctx} -> F A Γ -> G A Γ)
+    -> {Γ Δ : Ctx} -> Rpl F Γ Δ -> Rpl G Γ Δ
+  map f · = ·
+  map f (σ , x) = map f σ , f x
+  map f (lock σ m) = lock (map f σ) m
 
   module Properties
+    (F : Ty -> Ctx -> Set)
     (◁1 : {Γ : Ctx} -> Γ ◁ (Γ ,🔓))
     (rewind-⊆ : {Γ Γ' Δ : Ctx} -> (m : Γ' ◁ Γ) -> Γ ⊆ Δ
       -> Σ Ctx λ Δ' -> Δ' ◁ Δ × Γ' ⊆ Δ')
@@ -162,44 +169,44 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) (F : Ty -> Ctx -> Set) where
     where
 
     -- Composition of substitution and weakening
-    wk : {Γ Δ Δ' : Ctx} -> Δ ⊆ Δ' -> Rpl Γ Δ -> Rpl Γ Δ'
+    wk : {Γ Δ Δ' : Ctx} -> Δ ⊆ Δ' -> Rpl F Γ Δ -> Rpl F Γ Δ'
     wk w · = ·
     wk w (σ , x) = wk w σ , wkF w x
     wk w (lock σ m)
       = let _ , (m' , w') = rewind-⊆ m w in lock (wk w' σ) m'
 
     -- Composition of weakening and substitution
-    trim : {Γ Γ' Δ : Ctx} -> Γ ⊆ Γ' -> Rpl Γ' Δ -> Rpl Γ Δ
+    trim : {Γ Γ' Δ : Ctx} -> Γ ⊆ Γ' -> Rpl F Γ' Δ -> Rpl F Γ Δ
     trim base · = ·
     trim (weak w) (σ , _) = trim w σ
     trim (lift w) (σ , x) = trim w σ , x
     trim (lift🔓 w) (lock σ m) = lock (trim w σ) m
 
-    drop : {A : Ty} {Γ Δ : Ctx} -> Rpl Γ Δ -> Rpl Γ (Δ , A)
+    drop : {A : Ty} {Γ Δ : Ctx} -> Rpl F Γ Δ -> Rpl F Γ (Δ , A)
     drop = wk (weak ⊆.id)
 
-    liftRpl : {A : Ty} {Γ Δ : Ctx} -> Rpl Γ Δ -> Rpl (Γ , A) (Δ , A)
+    liftRpl : {A : Ty} {Γ Δ : Ctx} -> Rpl F Γ Δ -> Rpl F (Γ , A) (Δ , A)
     liftRpl σ = drop σ , head
 
-    id : {Γ : Ctx} -> Rpl Γ Γ
+    id : {Γ : Ctx} -> Rpl F Γ Γ
     id {·} = ·
     id {x , A} = liftRpl id
     id {x ,🔓} = lock id ◁1
 
-    from-⊆ : {Γ Δ : Ctx} -> Γ ⊆ Δ -> Rpl Γ Δ
+    from-⊆ : {Γ Δ : Ctx} -> Γ ⊆ Δ -> Rpl F Γ Δ
     from-⊆ base = ·
     from-⊆ (weak w) = drop (from-⊆ w)
     from-⊆ (lift w) = from-⊆ (weak w) , head
     from-⊆ (lift🔓 w) = lock (from-⊆ w) ◁1
 
-    trimNat : {Γ Γ' Δ Δ' : Ctx} (w : Γ' ⊆ Γ) (w' : Δ ⊆ Δ') (σ : Rpl Γ Δ)
+    trimNat : {Γ Γ' Δ Δ' : Ctx} (w : Γ' ⊆ Γ) (w' : Δ ⊆ Δ') (σ : Rpl F Γ Δ)
       -> wk w' (trim w σ) ≡ trim w (wk w' σ)
     trimNat base w' · = refl
     trimNat (weak w) w' (σ , x) = trimNat w w' σ
     trimNat (lift w) w' (σ , x) = cong1 _,_ (trimNat w w' σ)
     trimNat (lift🔓 w) w' (lock σ m) = cong1 lock (trimNat w _ σ)
 
-    trimIdl : {Γ Δ : Ctx} -> (σ : Rpl Γ Δ) -> trim ⊆.id σ ≡ σ
+    trimIdl : {Γ Δ : Ctx} -> (σ : Rpl F Γ Δ) -> trim ⊆.id σ ≡ σ
     trimIdl · = refl
     trimIdl (s , x) = cong (_, x) (trimIdl s)
     trimIdl (lock s m) = cong1 lock (trimIdl s)
@@ -222,7 +229,7 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) (F : Ty -> Ctx -> Set) where
       (wkFPres-● : {A : Ty} {Γ Δ Ξ : Ctx} (w : Γ ⊆ Δ) (w' : Δ ⊆ Ξ) (x : F A Γ)
         -> wkF (w ● w') x ≡ wkF w' (wkF w x))
       where
-      wkPres-● : {Γ Δ Δ' Δ'' : Ctx} (w : Δ ⊆ Δ') (w' : Δ' ⊆ Δ'') (σ : Rpl Γ Δ)
+      wkPres-● : {Γ Δ Δ' Δ'' : Ctx} (w : Δ ⊆ Δ') (w' : Δ' ⊆ Δ'') (σ : Rpl F Γ Δ)
         -> wk (w ● w') σ ≡ wk w' (wk w σ)
       wkPres-● w w' · = refl
       wkPres-● w w' (s , x) = cong₂ _,_ (wkPres-● w w' s) (wkFPres-● w w' x)
@@ -231,21 +238,13 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) (F : Ty -> Ctx -> Set) where
         (cong1 lock (wkPres-● _ _ s))
 
   module Composition
-    (rewind : {Γ Γ' Δ : Ctx} -> (m : Γ' ◁ Γ) -> Rpl Γ Δ
-      -> Σ Ctx λ Δ' -> Δ' ◁ Δ × Rpl Γ' Δ')
-    (apply : {A : Ty} {Γ Δ : Ctx} -> Rpl Γ Δ -> F A Γ -> F A Δ)
+    (F G : Ty -> Ctx -> Set)
+    (rewind : {Γ Γ' Δ : Ctx} -> (m : Γ' ◁ Γ) -> Rpl G Γ Δ
+      -> Σ Ctx λ Δ' -> Δ' ◁ Δ × Rpl G Γ' Δ')
+    (apply : {A : Ty} {Γ Δ : Ctx} -> Rpl G Γ Δ -> F A Γ -> G A Δ)
     where
-    _∙_ : {Γ Γ' Γ'' : Ctx} -> Rpl Γ Γ' -> Rpl Γ' Γ'' -> Rpl Γ Γ''
-    · ∙ y = ·
-    (x , a) ∙ y = (x ∙ y) , apply y a
-    lock x m ∙ y
-      = let _ , (m' , y') = rewind m y in lock (x ∙ y') m'
-
-module _ {_◁_ : Ctx -> Ctx -> Set} where
-  open Replacement _◁_ using (Rpl; ·; _,_; lock)
-
-  mapRpl : {F G : Ty -> Ctx -> Set} -> ({A : Ty} {Γ : Ctx} -> F A Γ -> G A Γ)
-    -> {Γ Δ : Ctx} -> Rpl F Γ Δ -> Rpl G Γ Δ
-  mapRpl f · = ·
-  mapRpl f (σ , x) = mapRpl f σ , f x
-  mapRpl f (lock σ m) = lock (mapRpl f σ) m
+    _∙_ : {Γ Γ' Γ'' : Ctx} -> Rpl F Γ Γ' -> Rpl G Γ' Γ'' -> Rpl G Γ Γ''
+    · ∙ δ = ·
+    (σ , a) ∙ δ = (σ ∙ δ) , apply δ a
+    lock σ m ∙ δ
+      = let _ , (m' , δ') = rewind m δ in lock (σ ∙ δ') m'

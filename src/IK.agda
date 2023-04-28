@@ -53,9 +53,9 @@ rewind-⊆-pres-● m@(snoc _) (weak w1) (lift w2) = rewind-⊆-pres-● m w1 (w
 rewind-⊆-pres-● (snoc m) (lift w1) (lift w2) = rewind-⊆-pres-● m w1 (weak w2)
 rewind-⊆-pres-● nil (lift🔓 w1) (lift🔓 w2) = refl
 
-rewindPres-∙ : ∀ {F} {Δ Γ Γ' Γ'' : Ctx} (m : Δ ◁ Γ) (σ : Rpl F Γ Γ') (δ : Rpl F Γ' Γ'')
-  {apply : {A : Ty} {Γ Δ : Ctx} -> Rpl F Γ Δ -> F A Γ -> F A Δ}
-  -> let open Rpl.Composition F rewind apply using (_∙_)
+rewindPres-∙ : ∀ {F G} {Δ Γ Γ' Γ'' : Ctx} (m : Δ ◁ Γ) (σ : Rpl F Γ Γ') (δ : Rpl G Γ' Γ'')
+  {apply : {A : Ty} {Γ Δ : Ctx} -> Rpl G Γ Δ -> F A Γ -> G A Δ}
+  -> let open Rpl.Composition F G rewind apply using (_∙_)
          _ , (m' , σ') = rewind m σ
          _ , (m'' , δ') = rewind m' δ
      in rewind m (σ ∙ δ) ≡ (_ , (m'' , (σ' ∙ δ')))
@@ -143,10 +143,10 @@ rewindFree (snoc m) (s1 , _) (s2 , _) = rewindFree m s1 s2
 rewindCommMap : {F G : Ty -> Ctx -> Set} {Γ Γ' Δ : Ctx}
   -> (f : {A : Ty} {Γ : Ctx} -> F A Γ -> G A Γ)
   -> (m : Γ' ◁ Γ) -> (σ : Replacement.Rpl _◁_ F Γ Δ)
-  -> let σ' = mapRpl f σ
-         _ , (_ , δ) = rewind m σ
-         _ , (_ , δ') = rewind m σ'
-     in mapRpl f δ ≡ ≡.subst (Rpl G Γ') (fst (rewindFree m σ' σ)) δ'
+  -> let σ' = Rpl.map f σ
+     in Rpl.map f (snd (snd (rewind m σ)))
+       ≡ ≡.subst (Rpl G Γ') (fst (rewindFree m σ' σ))
+       (snd (snd (rewind m σ')))
 rewindCommMap f (snoc m) (s , x) = rewindCommMap f m s
 rewindCommMap f nil (lock s m) with fst (LFExtIsProp' m m)
 ... | eq with Decidable⇒UIP.≡-irrelevant _≡Ctx?_ eq refl

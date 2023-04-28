@@ -164,7 +164,8 @@ substId (unbox x m) = ≡.trans
   (cong (λ (_ , (m' , σ')) -> unbox (subst σ' x) m') (rewindPresId m wkId))
   (cong1 unbox (substId x))
 
-open Rpl.Composition (λ A Δ -> Δ ⊢ A) rewind subst using (_∙_) public
+open Rpl.Composition (λ A Δ -> Δ ⊢ A) (λ A Δ -> Δ ⊢ A)
+  rewind subst using (_∙_) public
 
 idrSub : {Γ Δ : Ctx} {σ : Sub Γ Δ} -> σ ∙ Sub.id ≡ σ
 idrSub {σ = ·} = refl
@@ -315,6 +316,18 @@ wkNe w (app x y) = app (wkNe w x) (wkNf w y)
 wkNe w (unbox x m) = let _ , (m' , w') = rewind-⊆ m w
   in unbox (wkNe w' x) m'
 
+wkNfId : {Γ : Ctx} {A : Ty} (x : Γ ⊢nf A) -> wkNf ⊆.id x ≡ x
+wkNeId : {Γ : Ctx} {A : Ty} (x : Γ ⊢ne A) -> wkNe ⊆.id x ≡ x
+wkNfId (ne x) = cong ne (wkNeId x)
+wkNfId (abs x) = cong abs (wkNfId x)
+wkNfId (box x) = cong box (wkNfId x)
+
+wkNeId (var v) = cong var (wkVarId v)
+wkNeId (app x y) = cong₂ app (wkNeId x) (wkNfId y)
+wkNeId (unbox x m) = ≡.trans
+  (cong (λ (_ , (m' , w')) -> unbox (wkNe w' x) m') (rewind-⊆-presId m))
+  (cong1 unbox (wkNeId x))
+
 wkNfPres-● : ∀ {A Γ Δ Ξ} -> (w1 : Γ ⊆ Δ) (w2 : Δ ⊆ Ξ) (x : Γ ⊢nf A)
   -> wkNf (w1 ● w2) x ≡ wkNf w2 (wkNf w1 x)
 wkNePres-● : ∀ {A Γ Δ Ξ} -> (w1 : Γ ⊆ Δ) (w2 : Δ ⊆ Ξ) (x : Γ ⊢ne A)
@@ -400,6 +413,11 @@ postulate
       -> box' {wkA' = wkTy'} (a1 tt) (b1 tt) ≡ box' (a2 tt) (b2 tt)
     to refl refl = refl
 
+wkTy'Id : {Γ : Ctx} {A : Ty} (t' : ⟦ A ⟧ty Γ) -> wkTy' ⊆.id t' ≡ t'
+wkTy'Id {A = ι} t' = wkNfId t'
+wkTy'Id {A = A ⟶ B} t' = ⟶'≡ λ w a' -> cong1 (fst t') ⊆.idl
+wkTy'Id {A = □ A} t' = □'≡ λ w m -> cong1 (Box'.unbox' t') ⊆.idl
+
 wkTy'Pres-● : {A : Ty} {Γ Δ Ξ : Ctx} (w1 : Γ ⊆ Δ) (w2 : Δ ⊆ Ξ) (t' : ⟦ A ⟧ty Γ)
   -> wkTy' (w1 ● w2) t' ≡ wkTy' w2 (wkTy' w1 t')
 wkTy'Pres-● {ι} w1 w2 t' = wkNfPres-● w1 w2 t'
@@ -447,6 +465,13 @@ Env = Rpl ⟦_⟧ty
 module Env = Rpl.Properties ⟦_⟧ty
   ◁1 rewind-⊆
   wkTy' (reflect (var zero))
+
+wkEnvId : {Γ Δ : Ctx} (Γ' : Env Γ Δ) -> Env.wk ⊆.id Γ' ≡ Γ'
+wkEnvId · = refl
+wkEnvId (Γ' , t') = cong₂ _,_ (wkEnvId Γ') (wkTy'Id t')
+wkEnvId (lock Γ' m) = ≡.trans
+  (cong (λ (_ , (m' , w')) -> lock (Env.wk w' Γ') m') (rewind-⊆-presId m))
+  (cong1 lock (wkEnvId Γ'))
 
 wkEnvPres-● = Env.wkPres-● rewind-⊆-pres-● wkTy'Pres-●
 

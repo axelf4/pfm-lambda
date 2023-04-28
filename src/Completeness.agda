@@ -70,9 +70,9 @@ module Ctx≈ where
     public
 
   toSub : {Γ Δ : Ctx} -> Ctx≈ Γ Δ -> Sub Γ Δ
-  toSub = mapRpl A≈A'.t
+  toSub = Rpl.map A≈A'.t
   toEnv : {Γ Δ : Ctx} -> Ctx≈ Γ Δ -> Env Γ Δ
-  toEnv = mapRpl A≈A'.t'
+  toEnv = Rpl.map A≈A'.t'
 
   toSubWk : {Γ Δ Δ' : Ctx} (σ≈δ : Ctx≈ Γ Δ) {w : Δ ⊆ Δ'} -> toSub (Props.wk w σ≈δ) ≡ Sub.wk w (toSub σ≈δ)
   toSubWk · = refl
@@ -88,7 +88,6 @@ module Ctx≈ where
   toSubId {Γ , A} = cong1 _,_ (≡.trans (toSubWk id {weak ⊆.id})
     (cong (Sub.wk _) toSubId))
   toSubId {Γ ,🔓} = cong1 lock toSubId
-
   toEnvId : {Γ : Ctx} -> toEnv id ≡ Env.id {Γ}
   toEnvId {·} = refl
   toEnvId {Γ , A} = cong1 _,_ (≡.trans (toEnvWk id {weak ⊆.id})
