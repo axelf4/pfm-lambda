@@ -18,10 +18,10 @@ open import Context
 open Parameters params
 open Replacement _◁_ using (Rpl; ·; _,_; lock)
 
-postulate
-  funext : Extensionality 0ℓ 0ℓ
+private
+  postulate funext : Extensionality 0ℓ 0ℓ
 
-funexti = implicit-extensionality funext
+  funexti = implicit-extensionality funext
 
 --- Syntax
 
@@ -377,8 +377,7 @@ wkTy' {A ⟶ B} w (t' , t'-nat) = (λ w' -> t' (w ● w'))
 wkTy' {□ A} w (box' t' t'-nat) = box' (λ w' -> t' (w ● w'))
   λ w2 m w3 -> ≡.trans (cong1 t' (≡.sym (●-assoc w w2 _))) (t'-nat (w ● w2) m w3)
 
-postulate
-  Ty'UIP : {A : Ty} {Γ : Ctx} -> UIP (⟦ A ⟧ty Γ)
+private postulate Ty'UIP : {A : Ty} {Γ : Ctx} -> UIP (⟦ A ⟧ty Γ)
 
 ⟶'≡ : {A B : Ty} {Γ : Ctx} {f f' : ⟦ A ⟶ B ⟧ty Γ}
   -> ({Δ : Ctx} (w : Γ ⊆ Δ) (a' : ⟦ A ⟧ty Δ) -> fst f w a' ≡ fst f' w a')

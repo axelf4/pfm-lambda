@@ -41,7 +41,7 @@ reify≈ {□ A} {t = t} t≈t' = ~-trans (□-η t) (cong-box (reify≈
   (≡.subst (λ x -> unbox x _ ≈ _) (wkId t) (t≈t' ⊆.id ◁1))))
 
 reflect≈ {ι} t' = ~-refl
-reflect≈ {A ⟶ A₁} t' w {a} {a'} a≈a' rewrite ≡.sym (⌜⌝ne-nat w t')
+reflect≈ {A ⟶ B} t' w {a} {a'} a≈a' rewrite ≡.sym (⌜⌝ne-nat w t')
   = cong-app ~-refl (reify≈ a≈a') ~◼≈ reflect≈ (app (wkNe w t') (reify a'))
 reflect≈ {□ A} t' w m rewrite ≡.sym (⌜⌝ne-nat w t')
   = reflect≈ (unbox (wkNe w t') m)
