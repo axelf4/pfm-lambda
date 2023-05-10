@@ -15,9 +15,9 @@
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}\newtheorem{definition}{Definition}
 
-\newcommand{\lock}{
-  \text{\tikz[baseline]{
+\newcommand{\lock}{\text{\tikz[baseline]{
       \fill[rounded corners=.1ex] (-.75ex,0) rectangle (.75ex,1ex);
       \draw[line width=.3ex] (-.4ex,.5ex) -- ++(0,.75ex) arc (180:0:.4ex) -- ++(0,-.75ex);
 }}}
@@ -96,7 +96,7 @@ where modalities are type constructors that add some properties.
 These may be understood using Kripke's possible worlds interpretation \cite{kripke63, huth04},
 where opening a subproof means visiting a replica new world,
 and shutting means returning.
-To keep track of subordinate proofs in typing judgements
+To keep track of subordinate proofs in typing judgments
 a new structural connective $\lock$ is added to the context when a $\Box$ is eliminated,
 and popped when the subproof is closed.
 
@@ -257,19 +257,19 @@ $$ \textit{rewind} : (m : \Gamma'\lhd\Gamma) \to (\sigma : \operatorname{Rpl} \G
 
 The equational theory of $\lambda_\text{PFM}$ is given in figure~\ref{fig:eq-theory},
 where reflexivity, symmetry, transitivity and congruence rules have been omitted.
-The notation $\Gamma \vdash t \sim s$ says that the terms $t$ and $s$
-are equal in the context $\Gamma$ up to the conversion relation $(\sim)$.
+The notation $t \sim s$ says that the terms $t$ and $s$
+are equal up to the conversion.
 
 \begin{figure}
   \centering
   \begin{align*}
     \llap{$\beta$ equivalence:}& \quad
-    \inferrule{\Gamma, A \vdash t : B \\ \Gamma \vdash s : A}{\Gamma \vdash (\lambda. \, t) \; s \sim t[s]} \quad
-    \inferrule{\Delta, \lock \vdash t : A \\ m : \Delta \lhd \Gamma}{\Gamma \vdash \unbox \; (\operatorname{box} t) \; m \sim \textit{subst} \; (\operatorname{lock} \textit{id}_s \; m) \; t} \\
+    \inferrule{\Gamma, A \vdash t : B \\ \Gamma \vdash s : A}{(\lambda. \, t) \; s \sim t[s]} \quad
+    \inferrule{\Delta, \lock \vdash t : A \\ m : \Delta \lhd \Gamma}{\unbox \; (\operatorname{box} t) \; m \sim \textit{subst} \; (\operatorname{lock} \textit{id}_s \; m) \; t} \\
     \llap{$\eta$ equivalence:}& \quad
     \inferrule{\Gamma \vdash t : A \to B}
-         {\Gamma \vdash t \sim \lambda. \, (\operatorname{wk} \; (\operatorname{weak} \textit{id}_\subseteq) \; t) \; (\operatorname{var} \operatorname{zero})} \quad
-         \inferrule{\Gamma \vdash t : \Box A}{\Gamma \vdash t \sim \operatorname{box} \; (\operatorname{unbox} t \; \lhd_\lock)}
+         {t \sim \lambda. \, (\operatorname{wk} \; (\operatorname{weak} \textit{id}_\subseteq) \; t) \; (\operatorname{var} \operatorname{zero})} \quad
+         \inferrule{\Gamma \vdash t : \Box A}{t \sim \operatorname{box} \; (\operatorname{unbox} t \; \lhd_\lock)}
   \end{align*}
   \caption{Equational theory of $\lambda_\text{PFM}$.
     The rules for lambda abstraction are as for STLC.
@@ -291,7 +291,7 @@ Normal and neutral forms are defined mutually as:
   \inferrule{x : A \in \Gamma}{\operatorname{var} x : \text{Ne} \; \Gamma \; A} \quad
   \inferrule{x : \text{Ne} \; \Gamma \; (A \to B) \\ y : \text{Nf} \; \Gamma \; A}
             {x \; y : \text{Ne} \; \Gamma \; B} \quad
-  \inferrule{x : \text{Ne} \; \Gamma \; (\Box A) \\ m : \Gamma'\lhd\Gamma}{\operatorname{unbox} x \; m : \text{Ne} \; \Gamma \; A}
+  \inferrule{x : \text{Ne} \; \Delta \; (\Box A) \\ m : \Delta\lhd\Gamma}{\operatorname{unbox} x \; m : \text{Ne} \; \Gamma \; A}
 \end{gather*}
 The normal forms are $\beta$-normal - no $\beta$-reductions are possible -
 and $\eta$-long - all variables are maximally applied and unboxed,
@@ -312,7 +312,7 @@ Then we interpret types in the model as
   \end{split}
 \end{equation}
 and contexts as environments, i.e. lists of semantic values, using $\operatorname{Rpl}$,
-$$ \llbracket \Gamma \rrbracket_\Delta \coloneqq \operatorname{Rpl}_{\llbracket\_\rrbracket} \Gamma \; \Delta $$
+$$ \llbracket \Gamma \rrbracket_\Delta \coloneqq \operatorname{Rpl}_{\llbracket-\rrbracket} \Gamma \; \Delta $$
 We have monotonicity for semantic values and environments,
 i.e. we have
 $wk_A : \Delta \subseteq \Delta' \to \llbracket A \rrbracket_\Delta \to \llbracket A \rrbracket_\Delta'$ and
@@ -320,11 +320,13 @@ $wk_\Gamma : \Delta \subseteq \Delta' \to \llbracket \Gamma \rrbracket_\Delta \t
 
 The definition of evaluation, reification and reflection is given in figure~\ref{fig:nbe}.
 The normalization function may then be given as
-\begin{align*}
-  &\textit{nf} : \Gamma \vdash t : A \to \operatorname{Nf} \; \Gamma \; A \\
-  &\textit{nf} \; t \coloneqq \, \downarrow^A (\llbracket t \rrbracket \; \textit{id}_e)
-\end{align*}
-where $\textit{id}_e$ is the identity environment.
+\begin{definition}[Normalization by Evaluation]
+  \begin{align*}
+    &\textit{nf} : \Gamma \vdash t : A \to \operatorname{Nf} \; \Gamma \; A \\
+    &\textit{nf} \; t \coloneqq \, \downarrow^A (\llbracket t \rrbracket \; \textit{id}_e)
+  \end{align*}
+  where $\textit{id}_e$ is the identity environment.
+\end{definition}
 The algorithm can be summarized as follows:
 Evaluation proceeds as for an interpreter,
 except closures take an extra OPE argument -
@@ -332,27 +334,27 @@ this allows conjuring fresh variables under binders
 when reifying functions.
 Then the resulting semantic value is reified back to its normal form.
 When reifying a box or function,
-evaluation proceeds with the boxed term,
-or the function applied to a neutral form corresponding to the argument type,
+evaluation resumes with the boxed term,
+or the closure applied to a neutral form corresponding to the argument type,
 respectively.
 
 \begin{figure}
   \centering
   \begin{align*}
-    &\mathrlap{\text{Evaluation} \quad \llbracket\_\rrbracket : \Gamma \vdash t : A \to \forall\Delta. \, \llbracket\Gamma\rrbracket_\Delta \to \llbracket A \rrbracket_\Delta} &&\\
-    &\llbracket x \rrbracket \; \hat\Gamma &&\coloneqq \text{lookup } x \text{ in } \hat\Gamma \\
-    &\llbracket \lambda. \, t \rrbracket \; \hat\Gamma \; w \; \hat a &&\coloneqq \llbracket t \rrbracket \; (\operatorname{wk}_{\hat\Gamma} w \; \hat\Gamma, \hat a) \\
-    &\llbracket t \; s \rrbracket \; \hat\Gamma &&\coloneqq \llbracket t \rrbracket \; \textit{id}_\subseteq \; (\llbracket s \rrbracket_{\hat\Gamma}) \\
-    &\llbracket \operatorname{box} t \rrbracket \; \hat\Gamma \; w \; m &&\coloneqq \llbracket t \rrbracket \; (\operatorname{lock} \; (\operatorname{wk}_{\hat\Gamma} w \; \hat\Gamma) \; m) \\
-    &\llbracket \operatorname{unbox} t \; m \rrbracket \; \hat\Gamma &&\coloneqq \llbracket t \rrbracket \; \hat\Delta \; \textit{id}_\subseteq m' \quad \text{where } m' , \hat\Delta = \textit{rewind} \; m \; \hat\Gamma \\
-    &\mathrlap{\text{Reification} \quad \downarrow^A : \llbracket A \rrbracket_\Gamma \to \operatorname{Nf} \Gamma \; A} &&\\
+    &\mathrlap{\text{Evaluation} \quad \llbracket-\rrbracket : \Gamma \vdash t : A \to \forall\Delta. \, \llbracket\Gamma\rrbracket_\Delta \to \llbracket A \rrbracket_\Delta} &&\\
+    &\llbracket x \rrbracket \; \gamma &&\coloneqq \text{lookup } x \text{ in } \gamma \\
+    &\llbracket \lambda. \, t \rrbracket \; \gamma &&\coloneqq \lambda w \; \hat a.\, \llbracket t \rrbracket \; (\operatorname{wk}_{\widehat\Gamma} w \; \gamma, \hat a) \\
+    &\llbracket t \; s \rrbracket \; \gamma &&\coloneqq \llbracket t \rrbracket \; \textit{id}_\subseteq \; (\llbracket s \rrbracket \; \gamma) \\
+    &\llbracket \operatorname{box} t \rrbracket \; \gamma &&\coloneqq \lambda w \; m.\, \llbracket t \rrbracket \; (\operatorname{lock} \; (\operatorname{wk}_{\widehat\Gamma} w \; \gamma) \; m) \\
+    &\llbracket \operatorname{unbox} t \; m \rrbracket \; \gamma &&\coloneqq \llbracket t \rrbracket \; \widehat\Delta \; \textit{id}_\subseteq \; m' \quad \text{where } m' , \widehat\Delta = \textit{rewind} \; m \; \gamma \\
+    &\mathrlap{\text{Reification} \quad \downarrow^A : \llbracket A \rrbracket_\Gamma \to \operatorname{Nf} \; \Gamma \; A} &&\\
     &\downarrow^\iota a &&\coloneqq a \\
-    &\downarrow^{A \to B} a &&\coloneqq \operatorname{abs} \; (\downarrow^B \; (a \; (\operatorname{weak} \textit{id}_\subseteq) \; (\uparrow^A (\operatorname{var} \operatorname{zero})))) \\
-    &\downarrow^{\Box A} a &&\coloneqq \operatorname{box} \; (\downarrow^A \; (a \; \textit{id}_\subseteq \lhd_\lock)) \\
-    &\mathrlap{\text{Reflection} \quad \uparrow^A : \operatorname{Ne} \Gamma \; A \to \llbracket A \rrbracket_\Gamma} &&\\
+    &\downarrow^{A \to B} a &&\coloneqq \operatorname{abs} \; (\downarrow^B (a \; (\operatorname{weak} \textit{id}_\subseteq) \; (\uparrow^A (\operatorname{var} \operatorname{zero})))) \\
+    &\downarrow^{\Box A} a &&\coloneqq \operatorname{box} \; (\downarrow^A (a \; \textit{id}_\subseteq \; \lhd_\lock)) \\
+    &\mathrlap{\text{Reflection} \quad \uparrow^A : \operatorname{Ne} \; \Gamma \; A \to \llbracket A \rrbracket_\Gamma} &&\\
     &\uparrow^\iota x &&\coloneqq \operatorname{nt} a \\
-    &\uparrow^{A \to B} x \; w \; a &&\coloneqq \; \uparrow^B ((\operatorname{wk}_{\operatorname{Ne}} w \; x) \; \downarrow^A a) \\
-    &\uparrow^{\Box A} x \; a &&\coloneqq \; \uparrow^B (\operatorname{unbox} \; (\operatorname{wk}_{\operatorname{Ne}} w \; x) \; m)
+    &\uparrow^{A \to B} x &&\coloneqq \lambda w \; a.\, \uparrow^B ((\operatorname{wk}_{\operatorname{Ne}} w \; x) \; (\downarrow^A a)) \\
+    &\uparrow^{\Box A} x &&\coloneqq \lambda a.\, \uparrow^B (\operatorname{unbox} \; (\operatorname{wk}_{\operatorname{Ne}} w \; x) \; m)
   \end{align*}
   \caption{Evaluation, reification and reflection definitions. \label{fig:nbe}}
 \end{figure}
@@ -362,11 +364,36 @@ instead of the syntax-directed approach of
 $$ \llbracket \Box A \rrbracket_\Gamma = \llbracket A \rrbracket_{\Gamma, \lock}$$
 one reason being that the $\unbox$ case of evaluation then would require
 being able to apply the equivalent of a $\operatorname{lock} \textit{id} \; m$ substitution
-on semantic values, or similar, in addition to weakening,
+on semantic values, in addition to weakening,
 whereas currently no such thing is needed,
 as the $m$ instead goes directly in $\unbox$ when reflecting.
 
 \section{Correctness}
+
+We define the composition of two $\operatorname{Rpl}$:s, which,
+while not appearing in the normalization algorithm,
+is used in the proof of its correctness.
+\begin{definition}[Composition of $\operatorname{Rpl}$:s]\label{def:composition}
+  For $\sigma : \operatorname{Rpl}_F \Gamma \; \Delta$
+  and $\delta : \operatorname{Rpl}_G \Delta \; \Xi$,
+  $F$ not necessarily equaling $G$,
+  their composition $\sigma \circ \delta : \operatorname{Rpl}_G \Gamma \; \Xi$
+  is given by
+  \begin{align*}
+    \cdot \circ \delta &\coloneqq \cdot \\
+    (\sigma , a) \circ \delta &\coloneqq (\sigma \circ \delta) , \textit{apply} \; \delta \; a \\
+    \operatorname{lock} \sigma \; m \circ \delta &\coloneqq \operatorname{lock} \; (\sigma \circ \delta') \; m'
+    \quad \text{where } m' , \delta' = \textit{rewind} \; m \; \delta
+  \end{align*}
+  where the definition is generic over a function
+  $\textit{apply} : \forall A \; \Gamma \; \Delta.\, \operatorname{Rpl}_G \Gamma \; \Delta \to F \; A \; \Gamma \to G \; A \; \Delta$,
+  e.g. for substitution/substitution composition
+  $\textit{apply}$ will be $\textit{subst}$.
+\end{definition}
+As the source context $\Gamma$ of $\sigma \circ \delta$ is the same as for $\sigma$,
+composition will preserve the inductive shape of $\sigma$,
+but differ in the $(-,-)$ constructor contents
+where $\delta$ is $\textit{apply}$:ed.
 
 Soundness and completeness of the conversion relation
 has been proved with respect to possible worlds,
@@ -417,8 +444,9 @@ Indeed, most show up in the goals when proving the $\unbox$ cases of the laws.
 
 \subsection{Completeness}
 
+Completeness states that a term is convertible to its normal form.
 \begin{theorem}[Completeness]
-  If $\Gamma \vdash t : A$, then $\Gamma \vdash t \sim \ulcorner \textit{nf} \; t \urcorner$.
+  If $\Gamma \vdash t : A$, then $t \sim \ulcorner \textit{nf} \; t \urcorner$.
 \end{theorem}
 
 The proof is an extension of the corresponding proof for STLC \cite{kovacs17},
@@ -427,10 +455,10 @@ between terms and semantic values:
 \begin{align*}
   (\simeq^A) &\subseteq \Gamma \vdash A \times \llbracket A \rrbracket_\Gamma \\
   t \simeq^\iota \hat t &\coloneqq t \sim \ulcorner \hat t \urcorner \\
-  t \simeq^{A \to B} \hat t &\coloneqq (w : \Gamma \subseteq \Delta) \to \forall a : \Delta \vdash A, \hat a : \llbracket A \rrbracket_\Delta.\,
-  \operatorname{app} \; (\textit{wk} \; w \; t) \; a \sim \hat t \; w \; \hat a \\
+  t \simeq^{A \to B} \hat t &\coloneqq (w : \Gamma \subseteq \Delta) \to \forall a : \Delta \vdash A, \hat a : \llbracket A \rrbracket_\Delta.\, a \simeq \hat a \\
+  &\qquad \to \operatorname{app} \; (\textit{wk} \; w \; t) \; a \simeq \hat t \; w \; \hat a \\
   t \simeq^{\Box A} \hat t &\coloneqq (w : \Gamma \subseteq \Gamma') \to (m : \Gamma' \lhd \Delta)
-  \to \operatorname{unbox} \; (\textit{wk} \; w \; t) \; m \sim \hat t \; w \; m
+  \to \operatorname{unbox} \; (\textit{wk} \; w \; t) \; m \simeq \hat t \; w \; m
 \end{align*}
 It is \emph{logical} in the sense that terms and semantic values of box/function types
 are related iff the results from unboxing/applying both to related terms and values, are related;
@@ -461,13 +489,13 @@ the so called \emph{fundamental theorem} of the logical relation:
     \simeq \llbracket s \rrbracket \; (\operatorname{lock} \; (\textit{wk} \; w \; \delta) \; m)
   \end{equation*}
   The induction hypothesis gives
-  $$ \textit{subst} \; (\operatorname{lock} \; (\textit{wk} \; w \; \sigma) \; m) \simeq \llbracket s \rrbracket \; (\operatorname{lock} \; (\textit{wk} \; w \; \delta) \; m) $$
+  $$ \textit{subst} \; (\operatorname{lock} \; (\textit{wk} \; w \; \sigma) \; m) \; s \simeq \llbracket s \rrbracket \; (\operatorname{lock} \; (\textit{wk} \; w \; \delta) \; m) $$
   which we compose with a conversion proof on the left
   \begin{equation*}
     \begin{split}
       &\Box\text{-}\beta \; (\textit{wk} \; (\operatorname{lift}_\lock \; w) \; (\textit{subst} \; (\operatorname{lock} \; \sigma \; \lhd_\lock) \; s)) \; m \\
       &\quad : \operatorname{unbox} \; (\operatorname{box} \; (\textit{wk} \; (\operatorname{lift}_\lock \; w) \; (\textit{subst} \; (\operatorname{lock} \; \sigma \; \lhd_\lock) \; s))) \\
-      &\qquad \sim \textit{subst} \; (\operatorname{lock} \; \textit{id} \; m) (\textit{wk} \; (\operatorname{lift}_\lock \; w) \; (\textit{subst} \; (\operatorname{lock} \; \sigma \; \lhd_\lock) \; s))
+      &\qquad \sim \textit{subst} \; (\operatorname{lock} \; \textit{id} \; m) \; (\textit{wk} \; (\operatorname{lift}_\lock \; w) \; (\textit{subst} \; (\operatorname{lock} \; \sigma \; \lhd_\lock) \; s))
     \end{split}
   \end{equation*}
   Here the term on the right side of $(\sim)$ does not immediately match up
@@ -481,7 +509,7 @@ the so called \emph{fundamental theorem} of the logical relation:
   and apply the IH on it and $s$.
 \end{proof}
 
-Similarily, we show that reification and reflection also respect $(\simeq)$.
+Similarly, we show that reification and reflection also respect $(\simeq)$.
 \begin{lemma}
   Reification and reflection respect $(\simeq)$:
   \begin{enumerate}
@@ -515,11 +543,11 @@ One detail remains, however.
 Depending on how $(\simeq_\text{ctx})$ is defined we may not be able to rewind it.
 We know only how to rewind OPE:s and $\operatorname{Rpl}$:s,
 not arbitrary data types, without taking more rewind functions as parameters.
-Thus we let $(\simeq_\text{ctx}) \coloneqq \operatorname{Rpl}_{A\simeq\hat A}$ where
-$$ A\!\simeq\!\hat A \; A \; \Gamma \coloneqq \exists t : \Gamma \vdash A, \hat t : \llbracket A \rrbracket_\Gamma.\, t \simeq \hat t $$
-is collection of a term, a semantic value, and a proof that the two are related.
+Thus we let $(\simeq_\text{ctx}) \coloneqq \operatorname{Rpl}_{A\simeq\widehat A}$ where
+$$ A\!\simeq\!\widehat A \; A \; \Gamma \coloneqq \exists t : \Gamma \vdash A, \hat t : \llbracket A \rrbracket_\Gamma.\, t \simeq \hat t $$
+is triplet of a term, a semantic value, and a proof that the two are related.
 The substitution may be recouped by mapping the $\operatorname{Rpl}$
-with a function that picks the $t$ out of each $A\!\simeq\!\hat A$,
+with a function that picks the $t$ out of each $A\!\simeq\!\widehat A$,
 likewise for the environment.
 For the proof of the $\operatorname{unbox}$ case of the fundamental theorem,
 we need two additional calculus parameters
@@ -554,12 +582,63 @@ in order to convince Agda.
 
 \subsection{Soundness}
 
+For two convertible terms,
+soundness expresses that normalization maps them to the same normal form.
 \begin{theorem}[Soundness]
   If $\Gamma : t \sim t'$, then $\textit{nf} \; t = \textit{nf} \; t'$.
 \end{theorem}
 
-The proof is accomplished by generalizing to a presheaf model
-and proceeding along the same lines as in \cite{altenkirch95}.
+The standard technique for proving soundness of STLC \cite{altenkirch95}
+uses a so called \emph{presheaf model},
+where terms are interpreted as \emph{natural transformations}
+between semantic contexts and semantic types.
+Concretely, what needs to be changed in order to ensure
+our possible worlds model is also a presheaf model,
+is to add \emph{naturality} conditions to the interpretation of types.
+Recall the interpretation of box types from equation \eqref{eq:sem-values}:
+$$ \llbracket \Box A \rrbracket_\Gamma \coloneqq \forall \Gamma', \Delta. \, \Gamma \subseteq \Gamma' \to \Gamma'\lhd\Delta \to \llbracket A \rrbracket_\Delta $$
+We constrain each box value $\hat a : \llbracket \Box A \rrbracket_\Gamma$
+(and similarly for function values,)
+to fulfill for all $w : \Gamma \subseteq \Gamma'$, $m : \Gamma' \lhd \Delta$ and $w' : \Delta \subseteq \Delta'$,
+$$ \hat a \; (w \circ w'') \; m' = \textit{wk}_{\widehat A} \; w' \; (\hat a \; w \; m) \quad \text{where } m' , w'' = \textit{rewind}_\subseteq \; m \; w' $$
+i.e. semantic boxes should commute with weakenings.
+This allows us to prove naturality for evaluation, reification and reflection.
+
+For proving soundness it suffices to show the following lemma:
+\begin{lemma}[Evaluation is sound w.r.t. conversion]
+  Given two terms $\Gamma \vdash t \; t' : A$ such that $t \sim t'$
+  and an environment $\gamma : \operatorname{Env} \; \Gamma \; \Delta$,
+  we have
+  $$ \llbracket t \rrbracket \; \gamma = \llbracket t' \rrbracket \; \gamma $$
+\end{lemma}
+The proof is by induction on $t \sim t'$.
+The $\Box\text{-}\eta$ equivalence case -
+where $t'$ is $\operatorname{box} \; (\operatorname{unbox} \; t \; \lhd_\lock)$ -
+follows from naturality of evaluation and $\textit{rewind-}\lhd_\lock$.
+(Though, since box types are interpreted as functions
+of a weakening and modal accessibility relation,
+we must first apply function extensionality
+in order to only have to show pointwise equality.)
+
+For $\Box\text{-}\beta$ equivalence it needs to be shown that
+$$ \llbracket t \rrbracket \; (\operatorname{lock} \; (\textit{wk}_{\widehat\Gamma} \; \textit{id}_\subseteq \; \gamma') \; m') = \llbracket \textit{subst} \; (\operatorname{lock} \; \textit{id}_s \; m) \; t \rrbracket \; \gamma $$
+where $m' , \gamma' = \textit{rewind} \; m \; \gamma$.
+We accomplish this using the fact that evaluating a substituted term
+is the same as evaluating the raw term in a modified environment,
+as summarized in the following lemma:
+\begin{lemma}
+  If $\Gamma \vdash t : A$, $\sigma : \operatorname{Sub} \; \Gamma \; \Delta$
+  and $\gamma : \operatorname{Env} \; \Delta \; \Xi$, then
+  $$ \llbracket \textit{subst} \; \sigma \; t \rrbracket \; \gamma = \llbracket t \rrbracket \; (\sigma \circ \gamma) $$
+\end{lemma}
+Here the fact that composition between $\operatorname{Rpl}$:s of different types is defined,
+see definition~\ref{def:composition}, comes into play,
+where we let $\textit{apply} \coloneqq \lambda \gamma \; t.\, \llbracket t \rrbracket \; \gamma$ be evaluation
+in order to compose substitutions and environments.
+After applying the lemma it remains to show
+$$ \llbracket t \rrbracket \; (\operatorname{lock} \; (\textit{wk}_{\widehat\Gamma} \; \textit{id}_\subseteq \; \gamma') \; m') = \llbracket t \rrbracket \; (\operatorname{lock} \; (\textit{id}_s \circ \gamma') \; m') $$
+which follows from
+$wk_e \; \textit{id}_\subseteq \; \gamma = \gamma = \textit{id}_s \circ \gamma$.
 
 \section{Remaining work}
 
