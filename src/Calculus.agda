@@ -490,8 +490,8 @@ lookup (suc x) (γ , _) = lookup x γ
 ⟦ box x ⟧tm γ = box' (λ w m -> ⟦ x ⟧tm (lock (Env.wk w γ) m))
   λ w m w' -> ≡.trans (cong (λ γ -> ⟦ x ⟧tm (lock γ _)) (wkEnvPres-● w _ γ))
     (⟦ x ⟧tm-nat w' (lock (Env.wk w γ) m))
-⟦_⟧tm (unbox x m) γ = let _ , (m' , Δ') = rewind m γ
-  in ⟦ x ⟧tm Δ' .Box'.unbox' ⊆.id m'
+⟦_⟧tm (unbox x m) γ = let _ , (m' , γ') = rewind m γ
+  in ⟦ x ⟧tm γ' .Box'.unbox' ⊆.id m'
 
 ⟦ abs t ⟧tm-nat w γ = ⟶'≡ λ w' a' -> cong ⟦ t ⟧tm (cong1 _,_ (≡.sym (wkEnvPres-● w w' γ)))
 ⟦ app t s ⟧tm-nat w γ rewrite ⟦ t ⟧tm-nat w γ | ⟦ s ⟧tm-nat w γ = ≡.trans
@@ -501,12 +501,12 @@ lookup (suc x) (γ , _) = lookup x γ
 ⟦ unbox t m ⟧tm-nat w γ rewrite
     rewindWk m γ w {wkF = wkTy'} {head = reflect (var zero)}
   | let
-      _ , (m' , Δ') = rewind m γ
+      _ , (m' , γ') = rewind m γ
       _ , (m'' , w') = rewind-⊆ m' w
-    in ⟦ t ⟧tm-nat w' Δ' = let _ , (m' , Δ') = rewind m γ
-  in ≡.trans
-    (cong1 (Box'.unbox' (⟦ t ⟧tm _)) (≡.trans ⊆.idr (≡.sym ⊆.idl)))
-    (⟦ t ⟧tm Δ' .Box'.natural ⊆.id m' w)
+    in ⟦ t ⟧tm-nat w' γ'
+  = let _ , (m' , γ') = rewind m γ in ≡.trans
+    (cong1 (⟦ t ⟧tm γ' .Box'.unbox') (≡.trans ⊆.idr (≡.sym ⊆.idl)))
+    (⟦ t ⟧tm γ' .Box'.natural ⊆.id m' w)
 ⟦ var zero ⟧tm-nat w (_ , _) = refl
 ⟦ var (suc x) ⟧tm-nat w (γ , _) = ⟦ var x ⟧tm-nat w γ
 

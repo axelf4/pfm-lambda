@@ -3,7 +3,7 @@
 \usepackage[backend=biber]{biblatex}
 \usepackage[hidelinks]{hyperref}
 \usepackage{tikz}
-\usepackage{mathtools,amssymb,amsthm,mathpartir}
+\usepackage{mathtools,amssymb,amsthm,mathpartir,fitch}
 \usepackage[llbracket,rrbracket]{stmaryrd}
 
 \bibliography{sources.bib}
@@ -78,24 +78,116 @@ in order to avoid repetition and ease further extensions.
 
 \section{Background}
 
-\textcite{fitch52} introduced a method for propositional deduction,
+In this section we summarize the necessary background knowledge
+for understanding the rest of the material.
+
+\subsection{Modal natural deduction}
+
+Modalities originate from modal logic.
+Here we consider the family of modal logics
+derived from intuitionistic propositional logic
+extended with the unary connective $\Box$,
+the inference rule \emph{necessitation},
+if $A$ then $\Box A$,
+and different axioms surrounding $\Box$ \cite{clouston18}.
+The most basic modal calculi, IK, comes from the \emph{K axiom}
+($\Box (A \supset B) \supset \Box A \supset \Box B$).
+K together with \emph{axiom T} ($\Box A \supset A$) gives IT;
+K and \emph{axiom 4} ($\Box A \supset \Box\Box A$) yield IK4;
+and K, T and 4 give IS4.
+
+Natural deduction is a proof system
+wherein reasoning is carried out using ``natural'' inference rules.
+\textcite{fitch52} introduced a notation for propositional natural deduction,
 central to which is the idea of \emph{subordinate proof}.
-For example, in order to prove $A \rightarrow B$ a subordinate proof may be opened
-containing the new assumption $A$, where one sets out to prove $B$.
+For example, in order to prove ``$A$ implies $B$'', $A \supset B$,
+a subordinate proof may be opened containing the new assumption $A$,
+where one sets out to prove $B$.
 If successful, the subordinate proof can be shut
-by introducing $A \rightarrow B$ in the original proof
+by introducing $A \supset B$ in the original proof
 thereby discharging the assumption $A$.
 
-This has been adapted for modal lambda calculi \cite{borghuis94},
-where modalities are type constructors that add some properties.
-These may be understood using Kripke's possible worlds interpretation \cite{kripke63, huth04},
-where opening a subproof means visiting a replica new world,
+This may be understood using Kripke's possible worlds interpretation \cite{kripke63, huth04}.
+Opening a subproof means visiting a replica new world,
+with an increase in knowledge owing to the new assumption,
 and shutting means returning.
-To keep track of subordinate proofs in typing judgments
-a new structural connective $\lock$ is added to the context when a $\Box$ is eliminated,
-and popped when the subproof is closed.
 
-\emph{Normalization by Evaluation} (NbE) is a technique for reducing terms to their normal forms,
+To extend natural deduction to modal logic,
+Fitch added the notion of a \emph{strict} subordinate proof \cite{borghuis94},
+see the example in \autoref{fig:ex-modal-nat-deduction},
+indicated by a `$\Box$' to the left of the line delineating the subproof.
+It is differentiated by not
+introducing a new hypothesis for the antecedent of the implication.
+Additionally,
+strict subordinate proofs may access
+prior derived formulas only of a certain shape
+from proofs to which they are subordinate.
+This is in contrast to ``ordinary'' subordinate proofs
+wherein any previous formula from a outer proof may be reiterated.
+This is how the mixing of formulas of different modes is prevented.
+Their usage is given in the following two rules for the logic K:
+\begin{equation*}
+  \begin{array}{l@{\hskip 4em}l}
+    \textsc{K-Import} & \textsc{K-Export} \\
+    \begin{fitch*}
+      \Box \varphi \\
+      \vdotswithin{\Box \varphi} \\
+      \fn \vdotswithin{\varphi} \\
+      \fa \varphi
+    \end{fitch*} &
+    \begin{fitch*}
+      \fn \vdotswithin{\varphi} \\
+      \fa \varphi \\
+      \Box \varphi
+    \end{fitch*}
+  \end{array}
+\end{equation*}
+With \textsc{K-Import} we may import boxed formulas,
+but after we are done reasoning about them we must re-box the result
+with \textsc{K-Export} to make use of it.
+
+\begin{figure}
+  \centering
+    \begin{fitch}
+      \fj \Box (A \supset B) \\
+      \fa \fh \Box A \\
+      \fa \fa \fn A \supset B & K-import, 1 \\
+      \fa \fa \fa A & K-import, 2 \\
+      \fa \fa \fa B & $\supset$-elim, 3, 4 \\
+      \fa \fa \Box B & K-export, 3-5 \\
+      \fa \Box A \supset \Box B & $\supset$-intro, 2-6 \\
+      \Box (A \supset B) \supset (\Box A \supset \Box B) & $\supset$-intro, 1-7
+    \end{fitch}
+  \caption{Example of a modal natural deduction proof of the formula
+    $\Box (A \supset B) \supset (\Box A \supset \Box B)$.
+    Note how a strict subordinate proof must be opened
+    in order to facilitate reasoning about that inside modalities.
+    \label{fig:ex-modal-nat-deduction}}
+\end{figure}
+
+\subsection{Lambda calculus with modalities}
+
+The Curry-Howard isomorphism connects logic and lambda calculus,
+a bare-bones model of computation
+consisting of only functions and function application.
+The grammar of lambda calculus terms is evidently short:
+\begin{align*}
+  t, s \Coloneqq& \, x &&\text{variable access} \\
+  \mid& \, \lambda x.\, t &&\text{lambda abstraction} \\
+  \mid& \, t \; s &&\text{function application}
+\end{align*}
+The isomorphism states that there is a correspondence between
+formulae and their proofs in natural deduction,
+and types and programs of lambda calculus, respectively.
+Take the formula $A \supset A$ for instance,
+which says that ``$A$ implies $A$.''
+Proving the formula is analogous to giving a program of the type $A \to A$,
+for any type $A$,
+and one such program is $\lambda x.\, x$,
+which implements the identity function.
+
+\emph{Normalization by Evaluation} (NbE) is a technique for
+reducing lambda calculus terms to their normal forms,
 which are not further reducible \cite{berger91}.
 Instead of implementing the normalization procedure ``by hand'',
 you instead proceed by evaluating,
@@ -105,18 +197,14 @@ e.g. on an argument when descending into a lambda,
 evaluation proceeds with a so called \emph{neutral value},
 containing enough information about its origins to make reification possible.
 
-Here we consider the family of Fitch-style modal lambda calculi
-derived from intuitionistic propositional logic
-extended with the unary connective $\Box$,
-the inference rule \emph{necessitation},
-if $\cdot \vdash A$ then $\cdot \vdash \Box A$,
-and different axioms surrounding $\Box$ \cite{clouston18}.
-The most basic modal calculi, $\lambda_\text{IK}$,
-comes from the \emph{K axiom}
-($\Box(A \rightarrow B) \rightarrow \Box A \rightarrow \Box B$).
-K together with \emph{axiom T} ($\Box A \rightarrow A$) gives $\lambda_\text{IT}$;
-K and \emph{axiom 4} ($\Box A \rightarrow \Box\Box A$) yield $\lambda_\text{IK4}$;
-and K, T and 4 give $\lambda_\text{IS4}$.
+This has been adapted for modal lambda calculi \cite{borghuis94},
+where modalities are type constructors that add some properties.
+In place of the K inference rules, \textsc{K-Export} and \textsc{K-Import},
+is two new operators $\operatorname{box}$ and $\operatorname{unbox}$
+respectively.
+To keep track of subordinate proofs in typing judgments
+a new structural connective $\lock$ is added to the context when a $\Box$ is eliminated,
+and popped when the subproof is closed.
 
 \textcite{valliappan22} noted that for the four lambda calculi
 $\lambda_\text{IK}$, $\lambda_\text{IT}$, $\lambda_\text{IK4}$, $\lambda_\text{IS4}$,
@@ -135,11 +223,11 @@ a single parametric calculus generalizing these four calculi.
     &\inferrule[$\lambda_\text{IK}$/\Box-Elim]
     {\Gamma \vdash t : \Box A}
     {\Gamma, \Gamma' \vdash \unbox_{\lambda_\text{IK}} t : A}
-    \lock \notin \Gamma' &
+    \; \lock \notin \Gamma' &
     &\inferrule[$\lambda_\text{IT}$/\Box-Elim]
           {\Gamma \vdash t : \Box A}
           {\Gamma, \Gamma' \vdash \unbox_{\lambda_\text{IT}} t : A}
-          \#_{\lock} (\Gamma') \le 1 \\
+          \; \#_{\lock} (\Gamma') \le 1 \\
           & \inferrule[$\lambda_\text{IK4}$/\Box-Elim]
             {\Gamma \vdash t : \Box A}
             {\Gamma, \lock, \Gamma' \vdash \unbox_{\lambda_\text{IK4}} t : A} &
@@ -156,16 +244,20 @@ a single parametric calculus generalizing these four calculi.
 The results have been formalized\footnote{Available online at
 \url{https://github.com/axelf4/pfm-lambda}.}
 in the proof assistant Agda \cite{norell07}.
+Agda is itself based on \emph{dependently typed} lambda calculus.
+``Dependently'' meaning definitions of types may depend on values,
+allowing you to state theorems about the results of functions.
 
-\section{The calculus $\lambda_\text{PFM}$}
+\section{The calculus \texorpdfstring{$\lambda_\text{PFM}$}{Lambda-PFM}}
 
-In this section we give the specification of the simply typed modal lambda calculus $\lambda_\text{PFM}$.
+In this section we give the specification of
+the simply typed modal lambda calculus $\lambda_\text{PFM}$.
 The calculus is parameterized by the binary relation $\Delta\lhd\Gamma$ on contexts,
 subject to requirements that will be given below.
 
 Types are constructed out of an uninterpreted base type $\iota$:
 $$ \text{\emph{Type}} \quad A, B \Coloneqq \iota \mid A \to B \mid \Box A $$
-Contexts are lists of types and locks:
+Contexts are snoc-lists of types and locks:
 $$ \text{\emph{Context}} \quad \Gamma \Coloneqq \cdot \mid \Gamma, A \mid \Gamma, \lock $$
 The intrinsically typed syntax of the language is given in figure~\ref{fig:typing-rules},
 where $\Gamma \vdash t : A$ is notation for $t$ being a well-typed term of type $T$ in context $\Gamma$.
@@ -174,7 +266,7 @@ De Bruijn indices are used to make $\alpha$-conversion implicit.
 \begin{figure}
   \centering
   \begin{align*}
-    &\inferrule[Var]{ }{\Gamma, x : A, \Gamma' \vdash x : A} \, \lock \notin \Gamma' &
+    &\inferrule[Var]{ }{\Gamma, x : A, \Gamma' \vdash x : A} \; \lock \notin \Gamma' &
     &\inferrule[\to-Intro]{\Gamma, A \vdash t : B}{\Gamma \vdash \lambda t : A \to B} &
     &\inferrule[\to-Elim]{\Gamma \vdash t : A \to B \\ \Gamma \vdash s : A}{\Gamma \vdash t \; s : B}
   \end{align*}
@@ -189,6 +281,7 @@ De Bruijn indices are used to make $\alpha$-conversion implicit.
 
 In order to present the equational theory
 we define OPE:s and substitutions.
+
 An \emph{order-preserving embedding} (OPE) is a binary relation on contexts $\Gamma \subseteq \Delta$
 signifying $\Gamma$ can be weakened, i.e. add more assumptions,
 to obtain $\Delta$.
@@ -197,7 +290,7 @@ It is defined inductively as
   \inferrule{ }{\operatorname{base} : \cdot \subseteq \cdot} \quad
   \inferrule{\Gamma \subseteq \Delta}{\operatorname{weak} : \Gamma \subseteq \Delta, A} \quad
   \inferrule{\Gamma \subseteq \Delta}{\operatorname{lift} : \Gamma, A \subseteq \Delta, A} \quad
-  \inferrule{\Gamma \subseteq \Delta}{\operatorname{lift_\lock} : \Gamma, \lock \subseteq \Delta, \lock}
+  \inferrule{\Gamma \subseteq \Delta}{\operatorname{lift}_\lock : \Gamma, \lock \subseteq \Delta, \lock}
 \end{equation*}
 We define a operation
 $\operatorname{wk} : \Gamma\subseteq\Delta \to \Gamma \vdash t : A \to \Delta \vdash t : A$
@@ -208,8 +301,32 @@ where we require the calculus parameter
 $$ \textit{rewind}_\subseteq : (m : \Gamma'\lhd\Gamma) \to (w : \Gamma\subseteq\Delta) \to \exists \Delta'. \, \Delta'\lhd\Delta \times \Gamma'\subseteq\Delta' $$
 that given a modal accessibility relation $m$
 truncates the contexts $\Gamma$ and $\Delta$ in $w$,
+see figure~\ref{fig:rewind},
 in order to remove as many locks from both as there are in $m$.
 That is to say, it transports $w$ from the future world $\Gamma$ to instead act on the past world $\Gamma'$.
+
+\begin{figure}
+  \centering
+  \begin{tikzpicture}
+    \node (Γ) at (1,1) {$\Gamma$};
+    \node (Γ') at (3,1) {$\Gamma\mathrlap'$};
+    \node (Δ) at (0,0) {$\Delta$};
+    \node (Δ') at (2,0) {$\Delta\mathrlap'$};
+    \path (Γ) edge[->,bend left=15] node[above] {$\sigma$} (Γ')
+    edge[-] node[auto=right] {$m$} (Δ)
+    (Δ') edge[-,dashed] node[auto=right] {$m'$} (Γ')
+    edge[<-,dashed,bend left=15] node[below] {$\sigma'$} (Δ);
+  \end{tikzpicture}
+  \caption{Intuition for the contexts involved in the $\textit{rewind}$ operation.
+    We identify an OPE $\Gamma \subseteq \Gamma'$,
+    or substitution $\operatorname{Sub} \Gamma \; \Gamma'$,
+    as a map $\sigma$ on terms from the context $\Gamma$ to $\Gamma'$.
+    Then, given a modal accessibility relation $m : \Delta \lhd \Gamma$,
+    $\Delta$ being some past world,
+    $\textit{rewind} \; m \; \sigma$ yields $\sigma'$ and $m'$
+    for some context $\Delta'$.
+    \label{fig:rewind}}
+\end{figure}
 
 For substitutions - and later environments - we note that both
 can be seen as replacement lists of items for each type in a context.
@@ -227,8 +344,9 @@ and defined inductively as
 This helps unify some of the calculus parameters,
 and avoids having some parameters depend on
 e.g. the definition of terms which in turn depends on other parameters.
-Substitutions may then be defined as $\operatorname{Sub} \coloneqq \Rpl$
-with $F \; A \; \Gamma = \Gamma \vdash A$.
+Substitutions may then be defined as
+$\operatorname{Sub} \coloneqq \operatorname{Rpl}_F$
+with $F \; A \; \Gamma \coloneqq \Gamma \vdash A$.
 
 With the exception of the $\operatorname{lock}$ constructor
 the definition of $\Rpl$ is as for substitutions in STLC.
@@ -251,7 +369,9 @@ using the parameter
 $$ \textit{rewind} : (m : \Gamma'\lhd\Gamma) \to (\sigma : \operatorname{Rpl} \Gamma \; \Delta) \to \exists \Delta'. \, \Delta'\lhd\Delta \times \operatorname{Rpl} \Gamma' \; \Delta' $$
 
 The equational theory of $\lambda_\text{PFM}$ is given in figure~\ref{fig:eq-theory},
-where reflexivity, symmetry, transitivity and congruence rules have been omitted.
+where reflexivity, symmetry, transitivity and congruence rules,
+which ensure that $(\sim)$ is an equivalence relation,
+have been omitted.
 The notation $t \sim s$ says that the terms $t$ and $s$
 are equal up to the conversion.
 
@@ -262,9 +382,8 @@ are equal up to the conversion.
     \inferrule{\Gamma, A \vdash t : B \\ \Gamma \vdash s : A}{(\lambda. \, t) \; s \sim t[s]} \quad
     \inferrule{\Delta, \lock \vdash t : A \\ m : \Delta \lhd \Gamma}{\unbox \; (\operatorname{box} t) \; m \sim \textit{subst} \; (\operatorname{lock} \textit{id}_s \; m) \; t} \\
     \llap{$\eta$ equivalence:}& \quad
-    \inferrule{\Gamma \vdash t : A \to B}
-         {t \sim \lambda. \, (\operatorname{wk} \; (\operatorname{weak} \textit{id}_\subseteq) \; t) \; (\operatorname{var} \operatorname{zero})} \quad
-         \inferrule{\Gamma \vdash t : \Box A}{t \sim \operatorname{box} \; (\operatorname{unbox} t \; \lhd_\lock)}
+    \inferrule{\Gamma \vdash t : A \to B}{t \sim \lambda. \, (\textit{wk} \; (\operatorname{weak} \textit{id}_\subseteq) \; t) \; (\operatorname{var} \operatorname{zero})} \quad
+    \inferrule{\Gamma \vdash t : \Box A}{t \sim \operatorname{box} \; (\operatorname{unbox} t \; \lhd_\lock)}
   \end{align*}
   \caption{Equational theory of $\lambda_\text{PFM}$.
     The rules for lambda abstraction are as for STLC.
@@ -284,7 +403,7 @@ Normal and neutral forms are defined mutually as:
   \inferrule{x : \text{Nf} \; (\Gamma, A) \; B}{\operatorname{abs} x : \text{Nf} \; \Gamma \; (A \to B)} \quad
   \inferrule{x : \text{Nf} \; (\Gamma, \lock) \; A}{\operatorname{box} x : \text{Nf} \; \Gamma \; (\Box A)} \\
   \inferrule{x : A \in \Gamma}{\operatorname{var} x : \text{Ne} \; \Gamma \; A} \quad
-  \inferrule{x : \text{Ne} \; \Gamma \; (A \to B) \\ y : \text{Nf} \; \Gamma \; A}
+  \inferrule{x : \text{Ne} \; \Gamma \; (A \to B) \\\\ y : \text{Nf} \; \Gamma \; A}
             {x \; y : \text{Ne} \; \Gamma \; B} \quad
   \inferrule{x : \text{Ne} \; \Delta \; (\Box A) \\ m : \Delta\lhd\Gamma}{\operatorname{unbox} x \; m : \text{Ne} \; \Gamma \; A}
 \end{gather*}
@@ -381,8 +500,8 @@ is used in the proof of its correctness.
     \quad \text{where } m' , \delta' = \textit{rewind} \; m \; \delta
   \end{align*}
   where the definition is generic over a function
-  $\textit{apply} : \forall A \; \Gamma \; \Delta.\, \operatorname{Rpl}_G \Gamma \; \Delta \to F \; A \; \Gamma \to G \; A \; \Delta$,
-  e.g. for substitution/substitution composition
+  $\textit{apply} : \forall A \; \Gamma \; \Delta.\, \operatorname{Rpl}_G \Gamma \; \Delta \to F \; A \; \Gamma \to G \; A \; \Delta$.
+  E.g. for substitution/substitution composition
   $\textit{apply}$ will be $\textit{subst}$.
 \end{definition}
 As the source context $\Gamma$ of $\sigma \circ \delta$ is the same as for $\sigma$,
@@ -398,8 +517,8 @@ with the addition of the following calculus parameters
   with a modal accessibility relation $\Gamma \lhd \Gamma, \lock$
   should work as expected, i.e. give back $m$ and $\sigma$:
   $$ \textit{rewind-$\lhd_\lock$} : \forall m, \sigma. \, \textit{rewind} \lhd_\lock (\operatorname{lock} \sigma \; m) \equiv m , \sigma $$
-  and the same for $\textit{rewind}_\subseteq$ on $\operatorname{lift_\lock}$.
-\item The operation $\textit{rewind}$ should preserve composition:
+  and the same for $\textit{rewind}_\subseteq$ on $\operatorname{lift}_\lock$.
+\item The operation $\textit{rewind}$ distributes over composition:
   \begin{align*}
     \textit{rewindPres-$\circ$} &: (m : \Delta\lhd\Gamma) \to (\sigma_1 : \operatorname{Rpl} \Gamma \; \Gamma') \to (\sigma_2 : \operatorname{Rpl} \Gamma' \; \Gamma'') \\
     &\to
@@ -515,7 +634,7 @@ Similarly, we show that reification and reflection also respect $(\simeq)$.
   \end{enumerate}
 \end{lemma}
 \begin{proof}
-  By induction on A.
+  By induction on $A$.
   (We only show the $\Box A$ case of (a),
   with the rest left as an exercise to the reader.)
   The proof of $t \simeq \hat t$ says unboxing of $t$ and $\hat t$ respects $(\simeq)$.
@@ -599,7 +718,8 @@ $$ \hat a \; (w \circ w'') \; m' = \textit{wk}_{\widehat A} \; w' \; (\hat a \; 
 i.e. semantic boxes should commute with weakenings.
 This allows us to prove naturality for evaluation, reification and reflection.
 
-For proving soundness it suffices to show the following lemma:
+For proving soundness, since normalization is evaluation followed by reification,
+it suffices to show the following lemma:
 \begin{lemma}[Evaluation is sound w.r.t. conversion]
   Given two terms $\Gamma \vdash t \; t' : A$ such that $t \sim t'$
   and an environment $\gamma : \operatorname{Env} \; \Gamma \; \Delta$,
@@ -612,7 +732,7 @@ where $t'$ is $\operatorname{box} \; (\operatorname{unbox} \; t \; \lhd_\lock)$ 
 follows from naturality of evaluation and $\textit{rewind-}\lhd_\lock$.
 (Though, since box types are interpreted as functions
 of a weakening and modal accessibility relation,
-we must first apply function extensionality
+we must first postulate function extensionality
 in order to only have to show pointwise equality.)
 
 For $\Box\text{-}\beta$ equivalence it needs to be shown that
@@ -621,7 +741,7 @@ where $m' , \gamma' = \textit{rewind} \; m \; \gamma$.
 We accomplish this using the fact that evaluating a substituted term
 is the same as evaluating the raw term in a modified environment,
 as summarized in the following lemma:
-\begin{lemma}
+\begin{lemma}[Action of evaluation on substituted terms]
   If $\Gamma \vdash t : A$, $\sigma : \operatorname{Sub} \; \Gamma \; \Delta$
   and $\gamma : \operatorname{Env} \; \Delta \; \Xi$, then
   $$ \llbracket \textit{subst} \; \sigma \; t \rrbracket \; \gamma = \llbracket t \rrbracket \; (\sigma \circ \gamma) $$
@@ -640,7 +760,7 @@ $wk_e \; \textit{id}_\subseteq \; \gamma = \gamma = \textit{id}_s \circ \gamma$.
 Another point is to investigate whether to replace OPE:s with renamings,
 i.e. substitutions where the replacement terms are variables.
 Not only would this remove
-the $\textit{rewind}_\subseteq$/$\textit{rewind}$ repetition,
+some $\textit{rewind}_\subseteq$/$\textit{rewind}$ repetition,
 but it would also be a step toward being able to add the \emph{R axiom}
 ($A \to \Box A$).
 \textcite{valliappan-r} showed that the condition
