@@ -5,13 +5,22 @@
       agda = pkgs.agda.withPackages (ps: with ps; [
         standard-library
       ]);
+
+      fitch.pkgs = [ (pkgs.runCommandLocal "fitch"
+        {
+          pname = "fitch";
+          tlType = "run";
+          src = pkgs.fetchurl {
+            url = "http://www.actual.world/resources/tex/sty/kluwer/edited/fitch.sty";
+            sha256 = "lFFiY3Xq2GOUJQ65VLXcd0XHDBMULvyqJmqMg0sMK4I=";
+          };
+        }
+        ''mkdir -p $out/tex/latex && cp $src $out/tex/latex/"$pname".sty'') ];
       latex = with pkgs; texlive.combine {
-        inherit (texlive) scheme-basic latexmk luatex fontspec
+        inherit (texlive) scheme-basic latexmk luatex
           biber biblatex
-          catchfile pgf transparent xcolor trimspaces koma-script svg
-          scalerel mathtools stmaryrd mathpartir
-          listings booktabs
-          microtype crimson;
+          pgf mathtools stmaryrd mathpartir;
+        inherit fitch;
       };
     in {
       devShells.x86_64-linux.default = pkgs.mkShell {
