@@ -19,7 +19,7 @@
       latex = with pkgs; texlive.combine {
         inherit (texlive) scheme-basic latexmk luatex
           biber biblatex
-          pgf mathtools stmaryrd mathpartir;
+          pgf mathtools stmaryrd mathpartir listings;
         inherit fitch;
       };
     in {

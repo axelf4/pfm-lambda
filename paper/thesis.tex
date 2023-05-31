@@ -5,6 +5,7 @@
 \usepackage{tikz}
 \usepackage{mathtools,amssymb,amsthm,mathpartir,fitch}
 \usepackage[llbracket,rrbracket]{stmaryrd}
+\usepackage{listings}
 
 \bibliography{sources.bib}
 
@@ -76,7 +77,18 @@ This prompts the need for a parametric Fitch-style modal lambda calculus
 generalizing the variants,
 in order to avoid repetition and ease further extensions.
 
-\section{Background}
+This thesis is structured as follows:
+\autoref{sec:background} contains an overview of the theory underlying the work;
+and \autoref{sec:calculus} and \autoref{sec:normalization}
+present the main result of this thesis,
+the parametric calculus and a accompanying normalization algorithm.
+In \autoref{sec:correctness} the correctness of normalization is proved;
+and \autoref{sec:instantiations} gives two concrete instantiations
+of the parametric calculus.
+Finally \autoref{sec:conclusion} concludes by discussing
+relations to prior work and possible future work.
+
+\section{Background}\label{sec:background}
 
 In this section we summarize the necessary background knowledge
 for understanding the rest of the material.
@@ -167,7 +179,7 @@ with \textsc{K-Export} to make use of it.
 
 \subsection{Lambda calculus with modalities}
 
-The Curry-Howard isomorphism connects logic and lambda calculus,
+The Curry-Howard isomorphism \cite{howard80} connects logic and lambda calculus,
 a bare-bones model of computation
 consisting of only functions and function application.
 The grammar of lambda calculus terms is evidently short:
@@ -186,6 +198,21 @@ for any type $A$,
 and one such program is $\lambda x.\, x$,
 which implements the identity function.
 
+Not all lambda calculus terms are meaningful,
+e.g. $x \; y$ when $x$ is not a lambda function.
+Types are one way of allowing evaluation to nevertheless be total,
+by restricting it to only \emph{well-typed} terms,
+$\Gamma \vdash t : A$, for some type $A$.
+The \emph{simply typed lambda calculus} (STLC) \cite{church40},
+in addition to some set of base types,
+has a single type constructor $A \to B$ for the types of functions.
+The \emph{typing relation} $\Gamma \vdash t : A$ is defined
+in terms of a \emph{typing context} $\Gamma$,
+which is an association of variables and their types,
+and is used i.a. in the function typing rule:
+$\lambda x.\, y$ is a well-typed term of type $A \to B$ in context $\Gamma$,
+if and only if $y$ has type $B$ in the context $\Gamma$ extended with $x : A$.
+
 \emph{Normalization by Evaluation} (NbE) is a technique for
 reducing lambda calculus terms to their normal forms,
 which are not further reducible \cite{berger91}.
@@ -197,7 +224,7 @@ e.g. on an argument when descending into a lambda,
 evaluation proceeds with a so called \emph{neutral value},
 containing enough information about its origins to make reification possible.
 
-This has been adapted for modal lambda calculi \cite{borghuis94},
+Modal logic has been adapted for modal lambda calculi \cite{borghuis94},
 where modalities are type constructors that add some properties.
 In place of the K inference rules, \textsc{K-Export} and \textsc{K-Import},
 is two new operators $\operatorname{box}$ and $\operatorname{unbox}$
@@ -206,17 +233,132 @@ To keep track of subordinate proofs in typing judgments
 a new structural connective $\lock$ is added to the context when a $\Box$ is eliminated,
 and popped when the subproof is closed.
 
-\textcite{valliappan22} noted that for the four lambda calculi
-$\lambda_\text{IK}$, $\lambda_\text{IT}$, $\lambda_\text{IK4}$, $\lambda_\text{IS4}$,
-only the $\Box$-elimination rules differ,
-see figure~\ref{fig:elim-rules},
-and chose to instead define the $\Box$-elimination rules
-in terms of different \emph{modal accessibility relations} $\Delta\lhd\Gamma$.
-The relation $\Delta\lhd\Gamma$ should be thought as saying
-``the contents of boxed values from context $\Delta$ may be accessed in the future context $\Gamma$,''
-as will become apparent upon seeing the generalized $\Box$-elimination rule.
+\subsection{Example: Staged computation}
+
+For the twofold purpose of exemplifying the previous section,
+and showing a practical application of the theory,
+this section gives an account of the work by \textcite{davies01}
+on leveraging the modal logic S4 for staged computation.
+
+Consider the problem of runtime code generation due to partial function application.
+For example, prior to a series of matrix multiplication with the same matrix,
+the code for the multiplication could be specialized at runtime
+once the matrix has been computed.
+If it turns out to contain a lot of zeros then that may be exploited
+to reduce the amount of computations needed.
+Detecting where this may be done automatically at compile time
+is similar to binding-time analysis in partial evaluation \cite{leone94}.
+Each subexpression is annotated with its data dependencies
+to detect whether it may be computed in an early stage
+after only some function arguments have been applied.
+However, in practice automatic choice of where to do runtime specialization
+may lead to slow-downs due to the nonnegligible cost of code generation.
+An alternative is mandating that computation staging is explicitly expressed
+the in the type system.
+
+The insight due to \cite{davies01} is that runtime code generation demands
+a quoted source expression,
+and quotation has been studied in modal logic,
+with intuitionistic S4 being the logic that models staged computation.
+We get the following interpretations of modal concepts
+\begin{itemize}
+\item Values of type $\Box A$ are code to be executed in future stage,
+  and compiled to generators for code of type $A$.
+\item The rule of necessitation,
+  i.e. we have $\operatorname{box} \; E : \Box A$ if $E : A$ in the empty context,
+  says we may quote any closed expression.
+\item Axiom T, $\vdash \Box A \to A$, is evaluation.
+  Specifically, the $\operatorname{unbox}$ constructor on values of type $\Box A$
+  will do evaluation,
+  and for values of types $\Box \cdots \Box A$ it will splice the quoted expressions
+  into a larger ones.
+\item Axiom 4, $\vdash \Box A \to \Box\Box A$, is requotation.
+\item We do \emph{not} have $\vdash A \to \Box A$,
+  since to quote a function its source code would need to be retrieved
+  which is not possible for arbitrary functions.
+\end{itemize}
+
+As an example, multiplication with runtime specialisation may be written
+in this framework as
+\begin{center}
+\begin{tabular}{c}
+\begin{lstlisting}[mathescape=true,morekeywords={if,then,else,box,unbox}]
+mult : $\mathbb N \to \Box (\mathbb N \to \mathbb N)$
+mult = $\lambda$n : $\mathbb N$. if n = 0
+    then box ($\lambda$m. 0)
+    else box ($\lambda$m. m + unbox (mult (n - 1)) m)
+\end{lstlisting}
+\end{tabular}
+\end{center}
+Now multiplication by zero becomes a constant function
+\begin{align*}
+  \textit{mult} \; 0 \mapsto^* &\operatorname{box} \; (\lambda \_.\, 0)
+  \intertext{and for other values, the entire \textit{mult} function is inlined}
+  \textit{mult} \; 2 \mapsto^* &\operatorname{box} \; (\lambda x.\, x + (\lambda y.\, y + (\lambda z.\, 0) \; y) \; x) \\
+  = &\operatorname{box} \; (\lambda x.\, x + x)
+\end{align*}
+The modal types guarantee that everything to be evaluated at runtime is known at that point.
+
+\subsection{Previous work}
+
+There are at present two main variants of lambda calculi formulations
+for the necessity modality.
+
+The first variant is the dual-context style proposed by \textcite{pfenning95,davies01},
+where two contexts, $\Psi; \Gamma$, are used to keep track of assumptions.
+The context $\Psi$ holds the assumptions that are ``necessarily true,''
+while $\Gamma$ maintains the true assumptions.
+The introduction and elimination rules are
+\begin{equation*}
+  \inferrule{\Psi; \cdot \vdash t : A}{\Psi; \Gamma \vdash \operatorname{box} \; t : \Box A} \qquad
+  \inferrule{\Psi; \Gamma \vdash t : \Box A \\ \Psi, x : A; \Gamma \vdash s : S}{\Psi; \Gamma \vdash \operatorname{letbox} \; x = t \; \operatorname{in} \; s : S}
+\end{equation*}
+The elimination rule destructures $\Box A$,
+and lets its content be temporarily necessarily true in $s$,
+and reducing it is applying a substitution:
+$$ \operatorname{letbox} \; x = t \; \operatorname{in} \; s : S \sim s[x \mapsto t] $$
+
+The second variant is Kripke- or Fitch style,
+which models Kripke's possible worlds semantics \cite{kripke63}.
+The worlds are connected via a \emph{modal accessibility relation}, $\Delta\lhd\Gamma$,
+which should be thought of as saying
+``the contents of boxed values from the world $\Delta$
+may be accessed in the future world $\Gamma$,''
+as will become apparent upon seeing the corresponding $\Box$-elimination rule.
+Imposing different algebraic structures on the relation
+yields different modal logics \cite{huth04}.
+For example, a reflexive modal accessibility relation corresponds to logic T,
+a transitive relation, to logic 4, etc.
+
+Kripke style, presented by \textcite{pfenning95,davies01},
+represents the previously accessed worlds as a stack of contexts,
+$\vec\Gamma = \Gamma_1; \ldots; \Gamma_n$,
+as opposed to Fitch style.
+The $\Box$ introduction and elimination rules look like
+\begin{equation*}
+  \inferrule{\vec\Gamma; \cdot \vdash t : A}{\vec\Gamma \vdash \operatorname{box} \; t : \Box A} \qquad
+  \inferrule{\vec\Gamma \vdash t : \Box A \\ \vert\vec\Delta\rvert = n}{\vec\Gamma; \vec\Delta \vdash \operatorname{unbox}_n \; t : A} \qquad
+\end{equation*}
+where $\lvert\vec\Delta\rvert$ is the number of local contexts in the stack $\vec\Delta$.
+The elimination rule takes an integer $n$ called the \emph{modal offset},
+encoding how far back into the past to travel to access $t$ of type $\Box A$.
+Adjusting the allowed values of $n$ gives different modal accessibility relations,
+and ergo different modal logics.
+
+Fitch style, on the other hand, its name stemming from Fitch-style natural deduction,
+comes from \textcite{borghuis94} and \textcite{clouston18}.
+It differs from Kripke style in that instead of a context stack, a flat list is used,
+with local contexts delimited by a special `\lock' symbol.
+The introduction and elimination rules are shown below in \autoref{sec:calculus}.
+
+\textcite{valliappan22} implemented normalization for the four modal lambda calculi
+$\lambda_\text{IK}$, $\lambda_\text{IT}$, $\lambda_\text{IK4}$, $\lambda_\text{IS4}$.
+As they note, for the four calculi only the $\Box$-elimination rules differ,
+see figure~\ref{fig:elim-rules}.
 In this thesis, we use that concept to formulate
-a single parametric calculus generalizing these four calculi.
+a single parametric calculus generalizing these four calculi,
+with a $\Box$-elimination rule that is parametric over
+the concrete modal accessibility relation in question.
 
 \begin{figure}
   \begin{align*}
@@ -248,7 +390,7 @@ Agda is itself based on \emph{dependently typed} lambda calculus.
 ``Dependently'' meaning definitions of types may depend on values,
 allowing you to state theorems about the results of functions.
 
-\section{The calculus \texorpdfstring{$\lambda_\text{PFM}$}{Lambda-PFM}}
+\section{The calculus \texorpdfstring{$\lambda_\text{PFM}$}{Lambda-PFM}}\label{sec:calculus}
 
 In this section we give the specification of
 the simply typed modal lambda calculus $\lambda_\text{PFM}$.
@@ -259,8 +401,7 @@ Types are constructed out of an uninterpreted base type $\iota$:
 $$ \text{\emph{Type}} \quad A, B \Coloneqq \iota \mid A \to B \mid \Box A $$
 Contexts are snoc-lists of types and locks:
 $$ \text{\emph{Context}} \quad \Gamma \Coloneqq \cdot \mid \Gamma, A \mid \Gamma, \lock $$
-The intrinsically typed syntax of the language is given in figure~\ref{fig:typing-rules},
-where $\Gamma \vdash t : A$ is notation for $t$ being a well-typed term of type $T$ in context $\Gamma$.
+The intrinsically typed syntax of the language is given in figure~\ref{fig:typing-rules}.
 De Bruijn indices are used to make $\alpha$-conversion implicit.
 
 \begin{figure}
@@ -295,7 +436,7 @@ It is defined inductively as
 We define a operation
 $\operatorname{wk} : \Gamma\subseteq\Delta \to \Gamma \vdash t : A \to \Delta \vdash t : A$
 that given an OPE weakens a term.
-Only the case of weakening an $\operatorname{unbox}$ term is unlike the simply typed lambda calculus (STLC) counterpart:
+Only the case of weakening an $\operatorname{unbox}$ term is unlike the STLC counterpart:
 $$ \textit{wk} \; w \; (\operatorname{unbox} \; t \; m) \coloneqq \operatorname{unbox} \; (\textit{wk} \; w' \; t) \; m' \quad \text{where } m' , w' = \textit{rewind}_\subseteq \; m \; w $$
 where we require the calculus parameter
 $$ \textit{rewind}_\subseteq : (m : \Gamma'\lhd\Gamma) \to (w : \Gamma\subseteq\Delta) \to \exists \Delta'. \, \Delta'\lhd\Delta \times \Gamma'\subseteq\Delta' $$
@@ -352,11 +493,13 @@ With the exception of the $\operatorname{lock}$ constructor
 the definition of $\Rpl$ is as for substitutions in STLC.
 Adding the alternate constructor
 $\operatorname{lift}_\lock : \Rpl \Gamma \; \Delta \to \Rpl \; (\Gamma, \lock) \; (\Delta, \lock)$
-it would be able to represent local substitutions in any of the ``worlds'' delimited by locks in the context.
+to STLC substitutions would allow them to represent local substitutions
+in any of the ``worlds'' delimited by locks in the context.
 Instead, $\operatorname{lock}$ with an argument $m : \Delta\lhd\Delta'$
 (as used in \cite{valliappan22})
-makes it possible to unify substitutions and the necessary \emph{modal transformations},
-where locks are removed and added from contexts as permitted by $(\lhd)$.
+makes it possible to unify substitutions and \emph{modal transformations},
+where locks are removed and added from contexts as permitted by $(\lhd)$,
+and which are needed to describe the effect of unboxing.
 
 With this choice of $\operatorname{lock}$ we make use of the parameter
 $$ \lhd_\lock : \forall\Gamma. \, \Gamma \lhd \Gamma, \lock $$
@@ -394,7 +537,7 @@ are equal up to the conversion.
     \label{fig:eq-theory}}
 \end{figure}
 
-\section{Normalization algorithm}
+\section{Normalization algorithm}\label{sec:normalization}
 
 We provide a NbE algorithm based on a possible worlds model.
 Normal and neutral forms are defined mutually as:
@@ -433,6 +576,10 @@ $wk_A : \Delta \subseteq \Delta' \to \llbracket A \rrbracket_\Delta \to \llbrack
 $wk_\Gamma : \Delta \subseteq \Delta' \to \llbracket \Gamma \rrbracket_\Delta \to \llbracket \Gamma \rrbracket_\Delta'$.
 
 The definition of evaluation, reification and reflection is given in figure~\ref{fig:nbe}.
+Variable lookup is as for STLC -
+the \textsc{Var} rule does not permit access across lock delimiters in the context,
+thus the $\operatorname{lookup}$ function just has to read
+the variable value from its place in the local environment.
 The normalization function may then be given as
 \begin{definition}[Normalization by Evaluation]
   Given a term $\Gamma \vdash t : A$,
@@ -481,7 +628,7 @@ on semantic values, in addition to weakening,
 whereas currently no such thing is needed,
 as the $m$ instead goes directly in $\unbox$ when reflecting.
 
-\section{Correctness}
+\section{Correctness}\label{sec:correctness}
 
 We define the composition of two $\operatorname{Rpl}$:s, which,
 while not appearing in the normalization algorithm,
@@ -744,9 +891,51 @@ $$ \llbracket t \rrbracket \; (\operatorname{lock} \; (\textit{wk}_{\widehat\Gam
 which follows from
 $wk_e \; \textit{id}_\subseteq \; \gamma = \gamma = \textit{id}_s \circ \gamma$.
 
-\section{Remaining work}
+\section{Concrete Instantiations}\label{sec:instantiations}
 
-Another point is to investigate whether to replace OPE:s with renamings,
+In this section we give instantiations of $\lambda_\text{PFM}$
+for the two concrete modal lambda calculi highlighted in \cite{valliappan22}.
+
+\subsection{Intuitionistic K}
+
+To obtain $\lambda_\text{IK}$ we let the modal accessibility relation be
+as in \autoref{fig:m-ik},
+i.e. $\Gamma$ extends $\Delta, \lock$ to the right without adding locks.
+
+\begin{figure}
+  \centering
+  \begin{equation*}
+    \inferrule{}{\operatorname{base} : \Gamma \lhd_{\lambda_\text{IK}} \Gamma, \lock} \qquad
+    \inferrule{m : \Delta \lhd_{\lambda_\text{IK}} \Gamma}{\operatorname{snoc} m : \Delta \lhd_{\lambda_\text{IK}} \Gamma, A}
+  \end{equation*}
+  \caption{Modal accessibility relation for $\lambda_\text{IK}$. \label{fig:m-ik}}
+\end{figure}
+
+The implementation of $\textit{rewind}$ is straightforward:
+\begin{equation*}
+  \begin{split}
+    \textit{rewind} \; \operatorname{base} \; (\operatorname{lock} \sigma \; m') &\coloneqq m' , \sigma \\
+    \textit{rewind} \; (\operatorname{snoc} \; m) \; (\sigma , \_) &\coloneqq \textit{rewind} \; m \; \sigma
+  \end{split}
+\end{equation*}
+All the remaining parameters are also simple -
+with the exception of $\textit{rewindPresId}$ where we need an additional lemma:
+\begin{lemma}
+  If $\sigma : \operatorname{Rpl} \Gamma \; \Gamma'$ such that
+  $\textit{wk} \; \textit{id}_\subseteq \; \sigma$,
+  then for all $m : \Delta \lhd_\text{IK} \Gamma$
+  $$ \textit{rewind} \; m \; (\textit{drop} \; \sigma) = \textit{rewind} \; m \; s $$
+  where $\textit{drop} \coloneqq \textit{wk} \; (\operatorname{weak} \; \textit{id}_\subseteq)$.
+\end{lemma}
+What makes the lemma provable is that all IK modal accessibility relations,
+($\lhd_\text{IK}$), start with a \lock (see the $\operatorname{base}$ constructor).
+The function $\textit{drop}$ only affects
+the part of the context to the left of the lock,
+which will be removed by the $\textit{rewind}$ operation.
+
+\section{Future Work}
+
+One point to investigate is whether to replace OPE:s with renamings,
 i.e. substitutions where the replacement terms are variables.
 Not only would this remove
 some $\textit{rewind}_\subseteq$/$\textit{rewind}$ repetition,
@@ -761,6 +950,8 @@ is sufficient for ensuring axiom R is satisfied in the model
 Unlike with OPE:s as given here,
 the condition holds when picking renamings for $R_i$,
 since renamings encapsulate lock weakenings.
+
+\section{Conclusion}\label{sec:conclusion}
 
 \printbibliography
 

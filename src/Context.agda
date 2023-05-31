@@ -67,10 +67,9 @@ data _∈_ (A : Ty) : Ctx -> Set where
 data Ext (🔓? : Set) (Γ : Ctx) : Ctx -> Set where
   nil : Ext 🔓? Γ Γ
   snoc : {Γ' : Ctx} {A : Ty} -> Ext 🔓? Γ Γ' -> Ext 🔓? Γ (Γ' , A)
-  snoc🔓 : {Γ' : Ctx} -> {🔓?} -> Ext 🔓? Γ Γ' -> Ext 🔓? Γ (Γ' ,🔓)
+  snoc🔓 : {🔓?} -> {Γ' : Ctx} -> Ext 🔓? Γ Γ' -> Ext 🔓? Γ (Γ' ,🔓)
 
 LFExt = Ext ⊥
-{-# DISPLAY Ext ⊥ = LFExt #-}
 
 -- The proof of Ext is irrelevant as long as the contexts match up.
 -- (This is the special case of LFExts starting from a lock.)
