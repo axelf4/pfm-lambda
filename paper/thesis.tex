@@ -100,7 +100,7 @@ Natural deduction is a proof system
 wherein reasoning is carried out using ``natural'' inference rules.
 \textcite{fitch52} introduced a notation for propositional natural deduction,
 central to which is the idea of \emph{subordinate proof}.
-For example, in order to prove ``$A$ implies $B$'', $A \supset B$,
+For example, in order to prove ``$A$ implies $B$,'' $A \supset B$,
 a subordinate proof may be opened containing the new assumption $A$,
 where one sets out to prove $B$.
 If successful, the subordinate proof can be shut
@@ -189,7 +189,7 @@ which implements the identity function.
 \emph{Normalization by Evaluation} (NbE) is a technique for
 reducing lambda calculus terms to their normal forms,
 which are not further reducible \cite{berger91}.
-Instead of implementing the normalization procedure ``by hand'',
+Instead of implementing the normalization procedure ``by hand,''
 you instead proceed by evaluating,
 before \emph{reifying} the resulting semantic value back into a term.
 If at any point computation is blocked on a value known only at run time,
@@ -435,10 +435,9 @@ $wk_\Gamma : \Delta \subseteq \Delta' \to \llbracket \Gamma \rrbracket_\Delta \t
 The definition of evaluation, reification and reflection is given in figure~\ref{fig:nbe}.
 The normalization function may then be given as
 \begin{definition}[Normalization by Evaluation]
-  \begin{align*}
-    &\textit{nf} : \Gamma \vdash t : A \to \operatorname{Nf} \; \Gamma \; A \\
-    &\textit{nf} \; t \coloneqq \, \downarrow^A (\llbracket t \rrbracket \; \textit{id}_e)
-  \end{align*}
+  Given a term $\Gamma \vdash t : A$,
+  normalization yields a normal form $\operatorname{Nf} \; \Gamma \; A$,
+  $$ \textit{nf} \; t \coloneqq \, \downarrow^A (\llbracket t \rrbracket \; \textit{id}_e) $$
   where $\textit{id}_e$ is the identity environment.
 \end{definition}
 The algorithm can be summarized as follows:
@@ -506,7 +505,7 @@ is used in the proof of its correctness.
 \end{definition}
 As the source context $\Gamma$ of $\sigma \circ \delta$ is the same as for $\sigma$,
 composition will preserve the inductive shape of $\sigma$,
-but differ in the $(-,-)$ constructor contents
+but differ i.a. in the $(-,-)$ constructor contents
 where $\delta$ is $\textit{apply}$:ed.
 
 Soundness and completeness of the conversion relation
@@ -664,33 +663,23 @@ The substitution may be recouped by mapping the $\operatorname{Rpl}$
 with a function that picks the $t$ out of each $A\!\simeq\!\widehat A$,
 likewise for the environment.
 For the proof of the $\operatorname{unbox}$ case of the fundamental theorem,
-we need two additional calculus parameters
+we need an additional calculus parameters
 \begin{itemize}
-\item The transported modal accessibility relation
-  should only depend on the contexts,
-  with the actual contents of the $\operatorname{Rpl}$ being irrelevant:
-  \begin{align*}
-    \textit{rewindFree} &: (m : \Xi\lhd\Gamma) \to \forall \sigma : \operatorname{Rpl}_F \Gamma \; \Delta, \delta : \operatorname{Rpl}_G \Gamma \; \Delta.\, \\
-    &\begin{array}[t]{@{}l@{}l@{}}
-      \text{let } & m' , \_ = \textit{rewind} \; m \; \sigma \\
-      & m'' , \_ = \textit{rewind} \; m \; \delta \\
-      \text{in } & m' \equiv m''
-    \end{array}
-  \end{align*}
 \item Rewind should commute with $\textit{map}_{\operatorname{Rpl}}$:
   \begin{multline*}
   \textit{rewindCommMap} : \forall (f : \forall A, \Gamma.\, F \; A \; \Gamma \to G \; A \; \Gamma), m, \sigma : \operatorname{Rpl}_F \; \Gamma \; \Delta. \\
-  \textit{map} \; f \; (\pi_2 \; (\textit{rewind} \; m \; \sigma)) \equiv \pi_2 \; (\textit{rewind} \; m \; (\textit{map} \; f \; \sigma))
+  \pi_1 \; (\textit{rewind} \; m \; \sigma) \equiv \pi_1 \; (\textit{rewind} \; m \; (\textit{map} \; f \; \sigma)) \\
+  \land \textit{map} \; f \; (\pi_2 \; (\textit{rewind} \; m \; \sigma)) \equiv \pi_2 \; (\textit{rewind} \; m \; (\textit{map} \; f \; \sigma))
   \end{multline*}
-  where $\pi_2$ is the second projection of the product type.
+  where $\pi_1$ and $\pi_2$ is the first and second projections of the product type.
 \end{itemize}
-These enable us to get the rewound substitution/environment
-from a rewound proof of $\sigma \simeq_\text{ctx} \delta$,
-with $\textit{rewindFree}$ used to make the types agree.
-It should be noted that we expect both equivalences to hold a priori,
-as explained in \citetitle{wadler89} \cite{wadler89},
+The parameter $\textit{rewindCommMap}$ enables us
+to get the rewound substitution/environment
+from a rewound proof of $\sigma \simeq_\text{ctx} \delta$.
+It should be noted that we expect the equivalence to hold a priori,
 since a $\textit{rewind}$ instantiation cannot observe
-the contents of the parametric $\operatorname{Rpl}$.
+the contents of the parametric $\operatorname{Rpl}$,
+as explained in \citetitle{wadler89} \cite{wadler89}.
 We still need to take them as parameters however,
 in order to convince Agda.
 
@@ -702,7 +691,7 @@ soundness expresses that normalization maps them to the same normal form.
   If $\Gamma : t \sim t'$, then $\textit{nf} \; t = \textit{nf} \; t'$.
 \end{theorem}
 
-The standard technique for proving soundness of STLC \cite{altenkirch95}
+The standard technique for proving soundness of STLC \cite{altenkirch95,kovacs17}
 uses a so called \emph{presheaf model},
 where terms are interpreted as \emph{natural transformations}
 between semantic contexts and semantic types.

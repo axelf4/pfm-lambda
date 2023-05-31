@@ -136,13 +136,11 @@ fund (box t) σ≈δ w m = ≡.subst
     ih = fund t (lock (Ctx≈.wk w σ≈δ) m)
 fund (unbox t m) σ≈δ rewrite ≡.sym (wkId (subst (snd (snd (rewind m (Ctx≈.toSub σ≈δ)))) t))
   = let
-    Ξ≡Ξ'1 , m≡m'1 = rewindFree m (Ctx≈.toSub σ≈δ) σ≈δ
-    Ξ≡Ξ'2 , m≡m'2 = rewindFree m (Ctx≈.toEnv σ≈δ) σ≈δ
+    Ξ≡Ξ'1 , (m≡m'1 , σ≡σ') = rewindCommMap A≈A'.t m σ≈δ
+    Ξ≡Ξ'2 , (m≡m'2 , δ≡δ') = rewindCommMap A≈A'.t' m σ≈δ
   in ≡.subst₂ (_≈_)
-    (≡.sym (dcong₃ (λ _Ξ Ξ' m -> unbox (wk ⊆.id (subst Ξ' t)) m)
-      Ξ≡Ξ'1 (≡.sym (rewindCommMap A≈A'.t  m σ≈δ)) m≡m'1))
-    (≡.sym (dcong₃ (λ Ξ Ξ' m -> ⟦ t ⟧tm {Ξ} Ξ' .Box'.unbox' ⊆.id m)
-      Ξ≡Ξ'2 (≡.sym (rewindCommMap A≈A'.t' m σ≈δ)) m≡m'2))
+    (dcong₃ (λ _Ξ σ' m' -> unbox (wk ⊆.id (subst σ' t)) m') Ξ≡Ξ'1 σ≡σ' m≡m'1)
+    (dcong₃ (λ Ξ δ' m' -> ⟦ t ⟧tm {Ξ} δ' .Box'.unbox' ⊆.id m') Ξ≡Ξ'2 δ≡δ' m≡m'2)
     (fund t (snd (snd (rewind m σ≈δ))) ⊆.id (fst (snd (rewind m σ≈δ))))
 -- Lookup witnesses for variables in σ≈δ
 fund (var zero) (σ≈δ , record { t≈t' = a≈a' }) = a≈a'

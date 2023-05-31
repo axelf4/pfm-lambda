@@ -4,7 +4,6 @@
 module IK where
 
 open import Agda.Builtin.Sigma using (Σ; fst; snd) renaming (_,_ to infix 20 _,_)
-open import Axiom.UniquenessOfIdentityProofs using (module Decidable⇒UIP)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl; cong; cong₂)
 open import Data.Product using (_×_)
 
@@ -59,11 +58,10 @@ rewindPres-∙ : ∀ {F G} {Δ Γ Γ' Γ'' : Ctx} (m : Δ ◁ Γ) (σ : Rpl F Γ
          _ , (m' , σ') = rewind m σ
          _ , (m'' , δ') = rewind m' δ
      in rewind m (σ ∙ δ) ≡ (_ , (m'' , (σ' ∙ δ')))
-rewindPres-∙ (snoc m) (s1 , x) s2 = rewindPres-∙ m s1 s2
-rewindPres-∙ nil (lock s1 x) s2 = refl
+rewindPres-∙ (snoc m) (σ , _) δ = rewindPres-∙ m σ δ
+rewindPres-∙ nil (lock σ _) δ = refl
 
-rewind-⊆-presId : {Γ Δ : Ctx} -> (m : Δ ◁ Γ)
-  -> rewind-⊆ m ⊆.id ≡ Δ , (m , ⊆.id)
+rewind-⊆-presId : {Γ Δ : Ctx} (m : Δ ◁ Γ) -> rewind-⊆ m ⊆.id ≡ Δ , (m , ⊆.id)
 rewind-⊆-presId nil = refl
 rewind-⊆-presId (snoc m) rewrite rewind-⊆-presId m = refl
 
@@ -74,10 +72,9 @@ rewindPresId : ∀ {F} {Γ Δ : Ctx} -> (m : Δ ◁ Γ)
   (wkFId : {A : Ty} {Γ : Ctx} (x : F A Γ) -> wkF ⊆.id x ≡ x)
     -> rewind m id ≡ Δ , (m , id)
 rewindPresId nil _ = refl
-rewindPresId {F} {Γ , A} {Δ} (snoc m) {wkF} {head} wkFId = let
-    ih = rewindPresId {Δ = Δ} m {wkF} {head} wkFId
+rewindPresId {F} (snoc m) {wkF} {head} wkFId = let
     x1 , (x2 , x3) = rewindDrop m id
-    y1 , y2 = Σ-≡,≡↔≡ .Inverse.f⁻¹ ih
+    y1 , y2 = Σ-≡,≡↔≡ .Inverse.f⁻¹ (rewindPresId m {wkF} {head} wkFId)
     m≡m' = ≡.trans (substTrans x1 y1 x2) (≡.trans (subst-application' snoc y1)
       (cong snoc (≡.trans (subst-application' fst y1) (cong fst y2))))
     σ≡σ' = ≡.trans (substTrans x1 y1 x3) (≡.trans (subst-application' snd y1) (cong snd y2))
@@ -87,22 +84,18 @@ rewindPresId {F} {Γ , A} {Δ} (snoc m) {wkF} {head} wkFId = let
     open import Data.Product.Properties using (Σ-≡,≡↔≡)
     open Rpl.Properties F ◁1 rewind-⊆ wkF head using (wk; drop; id)
 
-    rewind-⊆-id : {Γ Δ : Ctx} -> (m : Δ ◁ Γ) -> rewind-⊆ m ⊆.id ≡ Δ , (m , ⊆.id)
-    rewind-⊆-id nil = refl
-    rewind-⊆-id (snoc m) rewrite rewind-⊆-id m = refl
-
     wkId : {Γ Δ : Ctx} {σ : Rpl F Γ Δ} -> wk ⊆.id σ ≡ σ
     wkId {σ = ·} = refl
     wkId {σ = σ , x} = cong₂ _,_ wkId (wkFId x)
-    wkId {σ = lock σ m} rewrite rewind-⊆-id m = cong1 lock wkId
+    wkId {σ = lock σ m} rewrite rewind-⊆-presId m = cong1 lock wkId
 
-    rewindDrop : ∀ {Γ Γ' Δ A} -> (m : Δ ◁ Γ) (s : Rpl F Γ Γ')
-      -> let Δ'2 , (m'2 , s'2) = rewind m (drop {A} s)
-             Δ'1 , (m'1 , s'1) = rewind m s
+    rewindDrop : ∀ {Γ Γ' Δ A} -> (m : Δ ◁ Γ) (σ : Rpl F Γ Γ')
+      -> let Δ'2 , (m'2 , σ'2) = rewind m (drop {A} σ)
+             Δ'1 , (m'1 , σ'1) = rewind m σ
          in Σ (Δ'2 ≡ Δ'1) λ p ->
-           ≡.subst (_◁ _) p m'2 ≡ snoc m'1 × ≡.subst (Rpl F Δ) p s'2 ≡ s'1
-    rewindDrop nil (lock s m) rewrite rewind-⊆-id m = refl , (refl , wkId)
-    rewindDrop (snoc m) (s , _) = rewindDrop m s
+           ≡.subst (_◁ _) p m'2 ≡ snoc m'1 × ≡.subst (Rpl F Δ) p σ'2 ≡ σ'1
+    rewindDrop nil (lock σ m) rewrite rewind-⊆-presId m = refl , (refl , wkId)
+    rewindDrop (snoc m) (σ , _) = rewindDrop m σ
 
     substTrans : {A : Set} {P : A -> Set} {x y z : A}
       (x≡y : x ≡ y) (y≡z : y ≡ z) {p : P x} {q : P y}
@@ -132,22 +125,11 @@ rewindTrim nil (lift🔓 w) (lock s x) = refl
 rewindTrim m@(snoc _) (weak w) (s , x) {wkF} {head} = rewindTrim m w s {wkF} {head}
 rewindTrim (snoc m) (lift w) (s , x) {wkF} {head} = rewindTrim m w s {wkF} {head}
 
-rewindFree : ∀ {F G} {Γ Γ' Δ : Ctx} (m : Γ' ◁ Γ)
-  (σ : Rpl F Γ Δ) (δ : Rpl G Γ Δ)
-  -> let Δ' , (m' , _) = rewind m σ
-         Δ'' , (m'' , _) = rewind m δ
-     in Σ (Δ' ≡ Δ'') λ p -> ≡.subst (_◁ Δ) p m' ≡ m''
-rewindFree nil (lock s1 m1) (lock s2 m2) = LFExtIsProp' m1 m2
-rewindFree (snoc m) (s1 , _) (s2 , _) = rewindFree m s1 s2
-
 rewindCommMap : {F G : Ty -> Ctx -> Set} {Γ Γ' Δ : Ctx}
-  -> (f : {A : Ty} {Γ : Ctx} -> F A Γ -> G A Γ)
-  -> (m : Γ' ◁ Γ) -> (σ : Replacement.Rpl _◁_ F Γ Δ)
-  -> let σ' = Rpl.map f σ
-     in Rpl.map f (snd (snd (rewind m σ)))
-       ≡ ≡.subst (Rpl G Γ') (fst (rewindFree m σ' σ))
-       (snd (snd (rewind m σ')))
-rewindCommMap f (snoc m) (s , x) = rewindCommMap f m s
-rewindCommMap f nil (lock s m) with fst (LFExtIsProp' m m)
-... | eq with Decidable⇒UIP.≡-irrelevant _≡Ctx?_ eq refl
-... | refl = refl
+  (f : {A : Ty} {Γ : Ctx} -> F A Γ -> G A Γ) (m : Γ' ◁ Γ) (σ : Rpl F Γ Δ)
+  -> let σ' = Rpl.map f σ in Σ (fst (rewind m σ) ≡ fst (rewind m σ')) λ p ->
+    (≡.subst (_◁ Δ) p (fst (snd (rewind m σ))) ≡ fst (snd (rewind m σ')))
+      × (≡.subst (Rpl G Γ') p (Rpl.map f (snd (snd (rewind m σ))))
+        ≡ snd (snd (rewind m σ')))
+rewindCommMap f nil (lock s m) = refl , (refl , refl)
+rewindCommMap f (snoc m) (s , _) = rewindCommMap f m s
