@@ -18,8 +18,9 @@
         ''mkdir -p $out/tex/latex && cp $src $out/tex/latex/"$pname".sty'') ];
       latex = with pkgs; texlive.combine {
         inherit (texlive) scheme-basic latexmk luatex
-          biber biblatex
-          pgf mathtools stmaryrd mathpartir listings;
+          biber biblatex biblatex-ieee
+          pgf mathtools stmaryrd mathpartir listings
+          parskip titlesec microtype;
         inherit fitch;
       };
     in {

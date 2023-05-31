@@ -1,13 +1,31 @@
-\documentclass{article}
+\documentclass[12pt,twoside,openright]{report}
 
-\usepackage[backend=biber]{biblatex}
+\usepackage[backend=biber,style=ieee]{biblatex}
 \usepackage[hidelinks]{hyperref}
 \usepackage{tikz}
 \usepackage{mathtools,amssymb,amsthm,mathpartir,fitch}
 \usepackage[llbracket,rrbracket]{stmaryrd}
 \usepackage{listings}
+\usepackage[top=3cm,bottom=3cm,inner=3cm,outer=3cm]{geometry}
+\usepackage{parskip,titlesec,fancyhdr,microtype}
 
 \bibliography{sources.bib}
+
+\numberwithin{equation}{chapter}
+\numberwithin{figure}{chapter}
+\numberwithin{table}{chapter}
+
+\titleformat
+    {\chapter}[display]
+    {\Huge\bfseries\filcenter}
+    {\vspace{-4.2ex}\fontsize{50pt}{1em}\normalfont\thechapter}{1ex}{}
+
+\pagestyle{fancy}
+\renewcommand{\chaptermark}[1]{\markboth{\thechapter. #1}{}}
+\fancyhf{}
+\fancyhead[LE,RO]{\nouppercase{\leftmark}}
+\fancyfoot[LE,RO]{\thepage}
+\setlength{\headheight}{15pt}
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}[theorem]{Lemma}
@@ -21,42 +39,101 @@
 \DeclareMathOperator\Rpl{Rpl}
 \DeclareMathOperator\unbox{unbox}
 
+\newcommand{\oneLineTitle}{A Parametric Fitch-Style Modal Lambda Calculus}
+\newcommand{\multiLineTitle}[1]{A Parametric Fitch-Style \\[#1] Modal Lambda Calculus}
+
 \begin{document}
+\pagenumbering{roman}
 
-\begin{titlepage}\centering
+\begin{titlepage}
+\newgeometry{top=5cm,bottom=1cm,left=2.25cm,right=2.25cm}
+\AddToHookNext{shipout/background}{\put (-4pt,-\paperheight)
+  {\includegraphics[width=\paperwidth,height=\paperheight]{frontpage_gu_eng}}}
 
-{\scshape\LARGE Master Thesis Half-Time Report\\}
-
-\vspace{0.5cm}
-
-{\huge\bfseries A Parametric Fitch-Style Modal Lambda Calculus\\}
-
-\vspace{2cm}
-
-{\Large Axel Forsman \texttt{<foraxel@student.chalmers.se>} \\}
-
-\vspace{1.0cm}
-
-{\large Supervisor: Nachiappan Valliappan \\}
-
-\vspace{1.0cm}
-
-{\large Examiner: Andreas Abel \\}
-
-\vspace{1.5cm}
-
-{\large Relevant completed courses:\par}
-
-{\itshape \begin{itemize}
-  \item DAT060, Logic in Computer Science; and
-  \item DAT350, Types for Programs and Proofs.
-  \end{itemize}}
-
+\mbox{}
 \vfill
-{\large April 17, 2023 \\}
+\renewcommand{\familydefault}{\sfdefault}\normalfont
+
+\textbf{\Huge \multiLineTitle{0.2cm}} \\[0.5cm]
+
+Master's thesis in Computer science and engineering \\[1cm]
+{\Large Axel Forsman} \\[2.9cm]
+
+Department of Computer Science and Engineering \\
+\textsc{Chalmers University of Technology} \\
+\textsc{University of Gothenburg} \\
+Gothenburg, Sweden \the\year
 \end{titlepage}
 
-\section{Introduction}
+\newpage
+\renewcommand{\familydefault}{\rmdefault}\normalfont
+\restoregeometry
+\thispagestyle{empty}
+\mbox{}
+
+% TITLE PAGE
+\newpage
+\thispagestyle{empty}
+\begin{center}
+	\textsc{\large Master's thesis \the\year} \\[4cm]
+	\textbf{\Large \multiLineTitle{0.2cm}} \\[2cm]
+    %% {\large \oneLineSubtitle} \\[1cm]
+	{\large Axel Forsman}
+
+	\vfill
+	%% Logotype on title page
+    \begin{center}
+	\includegraphics[width=0.25\pagewidth]{ChGULogo}
+    \end{center}
+	\vspace{5mm}
+
+	Department of Computer Science and Engineering \\
+	%% \emph{Division of Division name} \\
+	\textsc{Chalmers University of Technology} \\
+	\textsc{University of Gothenburg} \\
+	Gothenburg, Sweden \the\year \\
+\end{center}
+
+% IMPRINT PAGE (BACK OF TITLE PAGE)
+\newpage
+\thispagestyle{plain}
+\vspace*{4.5cm}
+\oneLineTitle \\
+%% \oneLineSubtitle \\
+Axel Forsman \\[1cm]
+
+\copyright~Axel Forsman, \the\year. \\[1cm]
+
+Supervisor: Nachiappan Valliappan, Department of Computer Science and Engineering \\
+Examiner: Andreas Abel, Department of Computer Science and Engineering \\[1cm]
+
+Master's Thesis \the\year \\
+Department of Computer Science and Engineering \\
+Chalmers University of Technology and University of Gothenburg \\
+SE-412 96 Gothenburg \\
+Telephone +46 31 772 1000 \\[0.5cm]
+
+\vfill
+% Caption for cover page figure if used, possibly with reference to further information in the report
+%% Cover: Description of the picture on the cover page (if applicable)
+
+Typeset in \LaTeX \\
+%% Printed by [Name of printing company] \\
+Gothenburg, Sweden \the\year
+
+\newpage
+\tableofcontents
+
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{\listfigurename}
+\listoffigures
+
+\cleardoublepage
+\setcounter{page}{1}
+\pagenumbering{arabic}
+
+\chapter{Introduction}
 
 The \emph{necessity modality}, denoted by $\Box$, where the focus will lie,
 has been applied to model confidentiality in information-flow control,
@@ -88,12 +165,12 @@ of the parametric calculus.
 Finally \autoref{sec:conclusion} concludes by discussing
 relations to prior work and possible future work.
 
-\section{Background}\label{sec:background}
+\chapter{Background}\label{sec:background}
 
-In this section we summarize the necessary background knowledge
+In this chapter we summarize the necessary background knowledge
 for understanding the rest of the material.
 
-\subsection{Modal natural deduction}
+\section{Modal natural deduction}
 
 Modalities originate from modal logic.
 Here we consider the family of modal logics
@@ -177,7 +254,7 @@ with \textsc{K-Export} to make use of it.
     \label{fig:ex-modal-nat-deduction}}
 \end{figure}
 
-\subsection{Lambda calculus with modalities}
+\section{Lambda calculus with modalities}
 
 The Curry-Howard isomorphism \cite{howard80} connects logic and lambda calculus,
 a bare-bones model of computation
@@ -233,7 +310,7 @@ To keep track of subordinate proofs in typing judgments
 a new structural connective $\lock$ is added to the context when a $\Box$ is eliminated,
 and popped when the subproof is closed.
 
-\subsection{Example: Staged computation}
+\section{Example: Staged computation}
 
 For the twofold purpose of exemplifying the previous section,
 and showing a practical application of the theory,
@@ -299,7 +376,7 @@ Now multiplication by zero becomes a constant function
 \end{align*}
 The modal types guarantee that everything to be evaluated at runtime is known at that point.
 
-\subsection{Previous work}
+\section{Previous work}
 
 There are at present two main variants of lambda calculi formulations
 for the necessity modality.
@@ -390,9 +467,9 @@ Agda is itself based on \emph{dependently typed} lambda calculus.
 ``Dependently'' meaning definitions of types may depend on values,
 allowing you to state theorems about the results of functions.
 
-\section{The calculus \texorpdfstring{$\lambda_\text{PFM}$}{Lambda-PFM}}\label{sec:calculus}
+\chapter{The calculus \texorpdfstring{$\lambda_\text{PFM}$}{Lambda-PFM}}\label{sec:calculus}
 
-In this section we give the specification of
+In this chapter we give the specification of
 the simply typed modal lambda calculus $\lambda_\text{PFM}$.
 The calculus is parameterized by the binary relation $\Delta\lhd\Gamma$ on contexts,
 subject to requirements that will be given below.
@@ -537,7 +614,7 @@ are equal up to the conversion.
     \label{fig:eq-theory}}
 \end{figure}
 
-\section{Normalization algorithm}\label{sec:normalization}
+\chapter{Normalization algorithm}\label{sec:normalization}
 
 We provide a NbE algorithm based on a possible worlds model.
 Normal and neutral forms are defined mutually as:
@@ -628,7 +705,7 @@ on semantic values, in addition to weakening,
 whereas currently no such thing is needed,
 as the $m$ instead goes directly in $\unbox$ when reflecting.
 
-\section{Correctness}\label{sec:correctness}
+\chapter{Correctness}\label{sec:correctness}
 
 We define the composition of two $\operatorname{Rpl}$:s, which,
 while not appearing in the normalization algorithm,
@@ -702,7 +779,7 @@ with the addition of the following calculus parameters
 These enable proving of the necessary weakening and substitution laws.
 Indeed, most show up in the goals when proving the $\unbox$ cases of the laws.
 
-\subsection{Completeness}
+\section{Completeness}
 
 Completeness states that a term is convertible to its normal form.
 \begin{theorem}[Completeness]
@@ -830,7 +907,7 @@ as explained in \citetitle{wadler89} \cite{wadler89}.
 We still need to take them as parameters however,
 in order to convince Agda.
 
-\subsection{Soundness}
+\section{Soundness}
 
 For two convertible terms,
 soundness expresses that normalization maps them to the same normal form.
@@ -891,12 +968,12 @@ $$ \llbracket t \rrbracket \; (\operatorname{lock} \; (\textit{wk}_{\widehat\Gam
 which follows from
 $wk_e \; \textit{id}_\subseteq \; \gamma = \gamma = \textit{id}_s \circ \gamma$.
 
-\section{Concrete Instantiations}\label{sec:instantiations}
+\chapter{Concrete Instantiations}\label{sec:instantiations}
 
-In this section we give instantiations of $\lambda_\text{PFM}$
+In this chapter we give instantiations of $\lambda_\text{PFM}$
 for the two concrete modal lambda calculi highlighted in \cite{valliappan22}.
 
-\subsection{Intuitionistic K}
+\section{Intuitionistic K}
 
 To obtain $\lambda_\text{IK}$ we let the modal accessibility relation be
 as in \autoref{fig:m-ik},
@@ -933,7 +1010,7 @@ The function $\textit{drop}$ only affects
 the part of the context to the left of the lock,
 which will be removed by the $\textit{rewind}$ operation.
 
-\section{Future Work}
+\chapter{Future Work}
 
 One point to investigate is whether to replace OPE:s with renamings,
 i.e. substitutions where the replacement terms are variables.
@@ -951,8 +1028,9 @@ Unlike with OPE:s as given here,
 the condition holds when picking renamings for $R_i$,
 since renamings encapsulate lock weakenings.
 
-\section{Conclusion}\label{sec:conclusion}
+\chapter{Conclusion}\label{sec:conclusion}
 
-\printbibliography
+\cleardoublepage
+\printbibliography[heading=bibintoc]
 
 \end{document}
