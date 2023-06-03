@@ -752,7 +752,7 @@ composition will preserve the inductive shape of $\sigma$,
 but differ i.a. in the $(-,-)$ constructor contents
 where $\delta$ is $\textit{apply}$:ed.
 
-Soundness and completeness of the conversion relation
+Soundness and completeness of normalization
 has been proved with respect to possible worlds,
 with the addition of the following calculus parameters
 \begin{itemize}
@@ -806,10 +806,10 @@ with the addition of the following calculus parameters
 These enable proving of the necessary weakening and substitution laws.
 Indeed, most show up in the goals when proving the $\unbox$ cases of the laws.
 
-\section{Completeness}
+\section{Soundness}
 
-Completeness states that a term is convertible to its normal form.
-\begin{theorem}[Completeness]
+Soundness states that a term is convertible to its normal form.
+\begin{theorem}[Soundness]
   If $\Gamma \vdash t : A$, then $t \sim \ulcorner \textit{nf} \; t \urcorner$.
 \end{theorem}
 
@@ -901,7 +901,7 @@ Similarly, we show that reification and reflection also respect $(\simeq)$:
 The fundamental theorem,
 using $\textit{id}_s$ and $\textit{id}_e$ for substitution and environment,
 may then be combined with the reification lemma
-to conclude the completeness proof.
+to conclude the soundness proof.
 
 One detail remains, however.
 Depending on how $(\simeq_\text{ctx})$ is defined we may not be able to rewind it.
@@ -935,15 +935,15 @@ as explained in \citetitle{wadler89} \cite{wadler89}.
 We still need to take it as a parameter however,
 in order to convince Agda.
 
-\section{Soundness}
+\section{Completeness}
 
 For two convertible terms,
-soundness expresses that normalization maps them to the same normal form.
-\begin{theorem}[Soundness]
+completeness expresses that normalization maps them to the same normal form.
+\begin{theorem}[Completeness]
   If $\Gamma : t \sim t'$, then $\textit{nf} \; t = \textit{nf} \; t'$.
 \end{theorem}
 
-The standard technique for proving soundness of STLC \cite{altenkirch95,kovacs17}
+The standard technique for proving completeness of STLC \cite{altenkirch95,kovacs17}
 uses a so called \emph{presheaf model},
 where terms are interpreted as \emph{natural transformations}
 between semantic contexts and semantic types.
@@ -959,7 +959,7 @@ $$ \hat a \; (w \circ w'') \; m' = \textit{wk}_{\widehat A} \; w' \; (\hat a \; 
 i.e. semantic boxes should commute with weakenings.
 This allows us to prove naturality for evaluation, reification and reflection.
 
-For proving soundness, since normalization is evaluation followed by reification,
+For proving completeness, since normalization is evaluation followed by reification,
 it suffices to show the following lemma:
 \begin{lemma}[Evaluation is sound w.r.t. conversion]
   Given two terms $\Gamma \vdash t \; t' : A$ such that $t \sim t'$
