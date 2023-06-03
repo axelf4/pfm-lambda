@@ -9,3 +9,4 @@ import Calculus
 import Soundness
 import Completeness
 import IK
+import IS4

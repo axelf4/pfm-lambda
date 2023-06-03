@@ -71,6 +71,18 @@ data Ext (🔓? : Set) (Γ : Ctx) : Ctx -> Set where
 
 LFExt = Ext ⊥ -- Lock-free context extension
 
+extConcat : {🔓? : Set} {Γ Γ' Γ'' : Ctx} -> Ext 🔓? Γ Γ' -> Ext 🔓? Γ' Γ'' -> Ext 🔓? Γ Γ''
+extConcat x nil = x
+extConcat x (snoc y) = snoc (extConcat x y)
+extConcat x (snoc🔓 🔓? y) = snoc🔓 🔓? {_} (extConcat x y)
+
+extAssoc : {🔓? : Set} {Γ Γ' Γ'' Γ''' : Ctx}
+  -> (e1 : Ext 🔓? Γ Γ') -> (e2 : Ext 🔓? Γ' Γ'') -> (e3 : Ext 🔓? Γ'' Γ''')
+  -> extConcat (extConcat e1 e2) e3 ≡ extConcat e1 (extConcat e2 e3)
+extAssoc e1 e2 nil = refl
+extAssoc e1 e2 (snoc e3) = cong snoc (extAssoc e1 e2 e3)
+extAssoc e1 e2 (snoc🔓 🔓? e3) = cong (snoc🔓 🔓?) (extAssoc e1 e2 e3)
+
 -- Order-preserving embedding (OPE).
 --
 -- For Γ ⊆ Δ, Δ is weaker than Γ since it has additional assumptions,

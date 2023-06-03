@@ -19,6 +19,12 @@ module _ {a} {b} {c} {d} where
     -> f x₁ y₁ z₁ ≡ f x₂ y₂ z₂
   dcong₃ _f refl refl refl = refl
 
+substTrans : {A : Set} {P : A -> Set} {x y z : A}
+  (x≡y : x ≡ y) (y≡z : y ≡ z) {p : P x} {q : P y}
+  -> subst P x≡y p ≡ q
+  -> subst P (trans x≡y y≡z) p ≡ subst P y≡z q
+substTrans refl refl refl = refl
+
 module _ {a p q} {A : Set a} {P : A -> Set p} {Q : A -> Set q}
   (g : {x : A} -> P x -> Q x) where
   subst-application' : ∀ {x₁ x₂ y} -> (eq : x₁ ≡ x₂)

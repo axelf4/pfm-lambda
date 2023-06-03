@@ -8,7 +8,7 @@ open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl; con
 open import Data.Product using (_×_)
 
 open import Context
-open import Util using (cong1; subst-application'; Σ×-≡,≡,≡→≡)
+open import Util using (cong1; substTrans; subst-application'; Σ×-≡,≡,≡→≡)
 
 _◁_ : Ctx -> Ctx -> Set
 Γ ◁ Δ = LFExt (Γ ,🔓) Δ
@@ -73,7 +73,7 @@ rewindPresId : ∀ {F} {Γ Δ : Ctx} -> (m : Δ ◁ Γ)
     -> rewind m id ≡ Δ , (m , id)
 rewindPresId nil _ = refl
 rewindPresId {F} (snoc m) {wkF} {head} wkFId = let
-    x1 , (x2 , x3) = rewindDrop m id
+    x1 , (x2 , x3) = rewindShift m id
     y1 , y2 = Σ-≡,≡↔≡ .Inverse.from (rewindPresId m {wkF} {head} wkFId)
     m≡m' = ≡.trans (substTrans x1 y1 x2) (≡.trans (subst-application' snoc y1)
       (cong snoc (≡.trans (subst-application' proj₁ y1) (cong proj₁ y2))))
@@ -89,19 +89,13 @@ rewindPresId {F} (snoc m) {wkF} {head} wkFId = let
     wkId {σ = σ , x} = cong₂ _,_ wkId (wkFId x)
     wkId {σ = lock σ m} rewrite rewind-⊆-presId m = cong1 lock wkId
 
-    rewindDrop : ∀ {Γ Γ' Δ A} -> (m : Δ ◁ Γ) (σ : Rpl F Γ Γ')
+    rewindShift : ∀ {Γ Γ' Δ A} -> (m : Δ ◁ Γ) (σ : Rpl F Γ Γ')
       -> let Δ'2 , (m'2 , σ'2) = rewind m (shift {A} σ)
              Δ'1 , (m'1 , σ'1) = rewind m σ
          in Σ (Δ'2 ≡ Δ'1) λ p ->
            ≡.subst (_◁ _) p m'2 ≡ snoc m'1 × ≡.subst (Rpl F Δ) p σ'2 ≡ σ'1
-    rewindDrop nil (lock σ m) rewrite rewind-⊆-presId m = refl , (refl , wkId)
-    rewindDrop (snoc m) (σ , _) = rewindDrop m σ
-
-    substTrans : {A : Set} {P : A -> Set} {x y z : A}
-      (x≡y : x ≡ y) (y≡z : y ≡ z) {p : P x} {q : P y}
-      -> ≡.subst P x≡y p ≡ q
-      -> ≡.subst P (≡.trans x≡y y≡z) p ≡ ≡.subst P y≡z q
-    substTrans refl refl refl = refl
+    rewindShift nil (lock σ m) rewrite rewind-⊆-presId m = refl , (refl , wkId)
+    rewindShift (snoc m) (σ , _) = rewindShift m σ
 
 rewindWk : ∀ {F} {Γ Γ' Γ'' Δ : Ctx} (m : Δ ◁ Γ) (σ : Rpl F Γ Γ') (w : Γ' ⊆ Γ'')
   {wkF : {A : Ty} {Γ Γ' : Ctx} -> Γ ⊆ Γ' -> F A Γ -> F A Γ'}
