@@ -31,6 +31,8 @@
 \newtheorem{lemma}[theorem]{Lemma}
 \theoremstyle{definition}\newtheorem{definition}{Definition}
 
+\newcommand{\tikznode}[2]{\tikz[remember picture,baseline=(#1.base),inner sep=0pt] \node (#1) {#2};}
+
 \newcommand{\lock}{\text{\tikz[baseline]{
       \fill[rounded corners=.1ex] (-.75ex,0) rectangle (.75ex,1ex);
       \draw[line width=.3ex] (-.4ex,.5ex) -- ++(0,.75ex) arc (180:0:.4ex) -- ++(0,-.75ex);
@@ -483,7 +485,21 @@ $$ \text{\emph{Type}} \quad A, B \Coloneqq \iota \mid A \to B \mid \Box A $$
 Contexts are snoc-lists of types and locks:
 $$ \text{\emph{Context}} \quad \Gamma \Coloneqq \cdot \mid \Gamma, A \mid \Gamma, \lock $$
 The intrinsically typed syntax of the language is given in figure~\ref{fig:typing-rules}.
-De Bruijn indices are used to make $\alpha$-conversion implicit.
+De Bruijn indices are used to make $\alpha$-conversion implicit:
+Instead of variable names, an index at each variable occurrence
+indicates the nesting depth relative to its corresponding binder,
+for example
+\vspace{.5\baselineskip}
+\begin{equation*}
+  \lambda x.\, (\lambda y.\, y \; (\lambda z.\, z)) \; (\lambda w.\, x \; w) \iff
+  \tikznode{l1}{\lambda.}\, (\tikznode{l2}{\lambda.}\, \tikznode{x1}{0} \; (\tikznode{l3}{\lambda.}\, \tikznode{x2}{0})) \; (\tikznode{l4}{\lambda.}\, \tikznode{x3}{1} \; \tikznode{x4}{0})
+  \tikz[remember picture,overlay,->]{
+    \draw ([yshift=1mm] x1.north) -- ++(0,.4\baselineskip) -| (l2.north);
+    \draw ([yshift=1mm] x2.north) -- ++(0,.4\baselineskip) -| (l3.north);
+    \draw ([yshift=1mm] x3.north) -- ++(0,.75\baselineskip) -| (l1.north);
+    \draw ([yshift=-1mm]x4.south) -- ++(0,-.4\baselineskip) -| ([yshift=-1mm] l4.south);
+  }
+\end{equation*}
 
 \begin{figure}
   \centering
