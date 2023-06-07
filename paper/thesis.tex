@@ -603,7 +603,7 @@ $$ \lhd_\lock : \forall\Gamma. \, \Gamma \lhd \Gamma, \lock $$
 in order to be able to define the identity substitution
 $\textit{id}_s : \forall\Gamma. \, \operatorname{Sub} \Gamma \; \Gamma$.
 
-As for OPE:s we define
+As for \textit{wk} in the case of OPE:s, we define
 $\textit{subst} : \operatorname{Rpl} \Gamma \; \Delta \to \Gamma \vdash t : A \to \Delta \vdash t : A$,
 using the parameter
 $$ \textit{rewind} : (m : \Gamma'\lhd\Gamma) \to (\sigma : \operatorname{Rpl} \Gamma \; \Delta) \to \exists \Delta'. \, \Delta'\lhd\Delta \times \operatorname{Rpl} \Gamma' \; \Delta' $$
@@ -762,19 +762,26 @@ with the addition of the following calculus parameters
   $$ \textit{rewind-$\lhd_\lock$} : \forall m, \sigma. \, \textit{rewind} \lhd_\lock (\operatorname{lock} \sigma \; m) \equiv m , \sigma $$
   and the same for $\textit{rewind}_\subseteq$ on $\operatorname{lift}_\lock$.
 \item The operation $\textit{rewind}$ distributes over composition:
-  \begin{align*}
-    \textit{rewindPres-$\circ$} &: (m : \Delta\lhd\Gamma) \to (\sigma_1 : \operatorname{Rpl} \Gamma \; \Gamma') \to (\sigma_2 : \operatorname{Rpl} \Gamma' \; \Gamma'') \\
-    &\to
-    \begin{array}[t]{@{}l@{}l@{}}
-      \text{let } & m' , \sigma_1' = \textit{rewind} \; m \; \sigma_1 \\
-      & m'' , \sigma_2' = \textit{rewind} \; m' \; \sigma_2 \\
-      \text{in } & \textit{rewind} \; m \; (\sigma_1 \circ \sigma_2) \equiv m'' , \sigma_1' \circ \sigma_2'
-    \end{array}
-  \end{align*}
+  \begin{equation}\label{eq:rewindPres-circ}
+    \begin{split}
+      \textit{rewindPres-$\circ$} &: (m : \Delta\lhd\Gamma) \to (\sigma_1 : \operatorname{Rpl} \Gamma \; \Gamma') \to (\sigma_2 : \operatorname{Rpl} \Gamma' \; \Gamma'') \\
+      &\to
+      \begin{array}[t]{@{}l@{}l@{}}
+        \text{let } & m' , \sigma_1' = \textit{rewind} \; m \; \sigma_1 \\
+        & m'' , \sigma_2' = \textit{rewind} \; m' \; \sigma_2 \\
+        \text{in } & \textit{rewind} \; m \; (\sigma_1 \circ \sigma_2) \equiv m'' , \sigma_1' \circ \sigma_2'
+      \end{array}
+    \end{split}
+  \end{equation}
   and likewise for $\textit{rewind}_\subseteq$.
 \item $\textit{rewind}$ should preserve identity:
   $$ \textit{rewindPresId} : (m : \Delta\lhd\Gamma) \to \textit{rewind} \; m \; \textit{id} \equiv m , \textit{id} $$
   and likewise for $\textit{rewind}_\subseteq$.
+
+  The parameter \textit{rewindPresId} further only has to hold for values of $F$ for which
+  $\operatorname{Rpl}_F$-weakening with the identity OPE is the identity function, i.e.
+  $$ \textit{wk}_{\operatorname{Rpl}_F} \; \textit{id}_\subseteq \; \sigma = \sigma $$
+  for all $\sigma : \operatorname{Rpl}_F \; \Gamma \; \Delta$.
 \item $\textit{rewind}$ should commute with weakening and substitution composition:
   \begin{align*}
     &\textit{rewindWk} &&: (m : \Delta\lhd\Gamma) \to (\sigma : \operatorname{Rpl} \Gamma \; \Gamma') \to (w : \Gamma' \subseteq \Gamma'') \\
@@ -866,7 +873,7 @@ the so called \emph{fundamental theorem} of the logical relation:
   and apply the IH on it and $s$.
 \end{proof}
 
-Similarly, we show that reification and reflection also respect $(\simeq)$.
+Similarly, we show that reification and reflection also respect $(\simeq)$:
 \begin{lemma}
   Reification and reflection respect $(\simeq)$:
   \begin{enumerate}
@@ -878,7 +885,7 @@ Similarly, we show that reification and reflection also respect $(\simeq)$.
 \end{lemma}
 \begin{proof}
   By induction on $A$.
-  (We only show the $\Box A$ case of (a),
+  (Only the $\Box A$ case of (a) is shown here,
   with the rest left as an exercise to the reader.)
   The proof of $t \simeq \hat t$ says unboxing of $t$ and $\hat t$ respects $(\simeq)$.
   Choosing $w = \textit{id}_\subseteq$ and $m = \lhd_\lock$
@@ -907,7 +914,7 @@ The substitution may be recouped by mapping the $\operatorname{Rpl}$
 with a function that picks the $t$ out of each $A\!\simeq\!\widehat A$,
 likewise for the environment.
 For the proof of the $\operatorname{unbox}$ case of the fundamental theorem,
-we need an additional calculus parameters
+an additional calculus parameter is needed
 \begin{itemize}
 \item Rewind should commute with $\textit{map}_{\operatorname{Rpl}}$:
   \begin{multline*}
@@ -923,8 +930,9 @@ from a rewound proof of $\sigma \simeq_\text{ctx} \delta$.
 It should be noted that we expect the equivalence to hold a priori,
 since a $\textit{rewind}$ instantiation cannot observe
 the contents of the parametric $\operatorname{Rpl}$,
+which is the only thing $\textit{map}_{\operatorname{Rpl}}$ modifies,
 as explained in \citetitle{wadler89} \cite{wadler89}.
-We still need to take them as parameters however,
+We still need to take it as a parameter however,
 in order to convince Agda.
 
 \section{Soundness}
@@ -945,7 +953,7 @@ is to add \emph{naturality} conditions to the interpretation of types.
 Recall the interpretation of box types from equation \eqref{eq:sem-values}:
 $$ \llbracket \Box A \rrbracket_\Gamma \coloneqq \forall \Gamma', \Delta. \, \Gamma \subseteq \Gamma' \to \Gamma'\lhd\Delta \to \llbracket A \rrbracket_\Delta $$
 We constrain each box value $\hat a : \llbracket \Box A \rrbracket_\Gamma$
-(and similarly for function values,)
+(and similarly for function values),
 to fulfill for all $w : \Gamma \subseteq \Gamma'$, $m : \Gamma' \lhd \Delta$ and $w' : \Delta \subseteq \Delta'$,
 $$ \hat a \; (w \circ w'') \; m' = \textit{wk}_{\widehat A} \; w' \; (\hat a \; w \; m) \quad \text{where } m' , w'' = \textit{rewind}_\subseteq \; m \; w' $$
 i.e. semantic boxes should commute with weakenings.
@@ -961,7 +969,7 @@ it suffices to show the following lemma:
 \end{lemma}
 The proof is by induction on $t \sim t'$.
 The $\Box\text{-}\eta$ equivalence case -
-where $t'$ is $\operatorname{box} \; (\operatorname{unbox} \; t \; \lhd_\lock)$ -
+where $t'$ is equal to $\operatorname{box} \; (\operatorname{unbox} \; t \; \lhd_\lock)$ -
 follows from naturality of evaluation and $\textit{rewind-}\lhd_\lock$.
 (Though, since box types are interpreted as functions
 of a weakening and modal accessibility relation,
@@ -992,12 +1000,15 @@ $wk_e \; \textit{id}_\subseteq \; \gamma = \gamma = \textit{id}_s \circ \gamma$.
 
 In this chapter we give instantiations of $\lambda_\text{PFM}$
 for the two concrete modal lambda calculi highlighted in \cite{valliappan22}.
+It is worth mentioning that the two resulting calculi are correct by construction,
+due to the correctness proof of the parametric calculus in \autoref{sec:correctness}.
 
-\section{Intuitionistic K}
+\section{Intuitionistic K}\label{sec:ik}
 
-To obtain $\lambda_\text{IK}$ we let the modal accessibility relation be
-as in \autoref{fig:m-ik},
-i.e. $\Gamma$ extends $\Delta, \lock$ to the right without adding locks.
+To obtain $\lambda_\text{IK}$ we let the modal accessibility relation,
+$\Delta \lhd_{\lambda_\text{IK}} \Gamma$, be as in \autoref{fig:ik-m},
+i.e. $\Gamma$ is an extension of $\Delta, \lock$ to the right without adding locks.
+The $\lhd_\lock$ parameter is given by the base case, $\operatorname{base}$, of the relation.
 
 \begin{figure}
   \centering
@@ -1005,30 +1016,167 @@ i.e. $\Gamma$ extends $\Delta, \lock$ to the right without adding locks.
     \inferrule{}{\operatorname{base} : \Gamma \lhd_{\lambda_\text{IK}} \Gamma, \lock} \qquad
     \inferrule{m : \Delta \lhd_{\lambda_\text{IK}} \Gamma}{\operatorname{snoc} m : \Delta \lhd_{\lambda_\text{IK}} \Gamma, A}
   \end{equation*}
-  \caption{Modal accessibility relation for $\lambda_\text{IK}$. \label{fig:m-ik}}
+  \caption{Modal accessibility relation for $\lambda_\text{IK}$. \label{fig:ik-m}}
 \end{figure}
 
-The implementation of $\textit{rewind}$ is straightforward:
+The implementations of $\textit{rewind}_\subseteq$ and \textit{rewind}
+by pattern-matching are both straightforward:
 \begin{equation*}
-  \begin{split}
-    \textit{rewind} \; \operatorname{base} \; (\operatorname{lock} \sigma \; m') &\coloneqq m' , \sigma \\
-    \textit{rewind} \; (\operatorname{snoc} \; m) \; (\sigma , \_) &\coloneqq \textit{rewind} \; m \; \sigma
-  \end{split}
+  \begin{array}{llll}
+    \textit{rewind}_\subseteq &m &(\operatorname{weak} w) &\coloneqq \operatorname{snoc} m' , w' \quad \text{where } m' , w' = \textit{rewind}_\subseteq \; m \; w \\
+    \textit{rewind}_\subseteq &(\operatorname{snoc} m) &(\operatorname{lift} w) &\coloneqq \operatorname{snoc} m' , w' \quad \text{where } m' , w' = \textit{rewind}_\subseteq \; m \; w \\
+    \textit{rewind}_\subseteq &\operatorname{base} &(\operatorname{lift}_\lock \; w) &\coloneqq \operatorname{base} , w
+  \end{array}
 \end{equation*}
-All the remaining parameters are also simple -
-with the exception of $\textit{rewindPresId}$ where we need an additional lemma:
+and
+\begin{equation}\label{eq:ik-rewind}
+  \begin{array}{llll}
+    \textit{rewind} &\operatorname{base} &(\operatorname{lock} \sigma \; m') &\coloneqq m' , \sigma \\
+    \textit{rewind} &(\operatorname{snoc} \; m) &(\sigma , \_) &\coloneqq \textit{rewind} \; m \; \sigma
+  \end{array}
+\end{equation}
+where the each inductive step pops one snoc layer from
+the modal accessibility relation, and OPE or $\operatorname{Rpl}$ respectively,
+in tandem until reaching the base case.
+The exception is the $\operatorname{weak}$ OPE constructor which is skipped past.
+In the inductive cases of $\textit{rewind}_\subseteq$,
+the returned $m'$ is built up with $\operatorname{snoc}$,
+such that for an OPE $\Gamma \subseteq \Delta$,
+$m'$ will relate the target context $\Delta$ and its rewound parallel;
+for \textit{rewind} that information is entirely in the $\operatorname{lock}$ constructor instead.
+
+All the remaining parameters are trivial -
+it suffices to case split on the possible constructors of ($\lhd_{\lambda_\text{IK}}$)
+and the OPE or $\operatorname{Rpl}$,
+until Agda confirms the parameter holds definitionally in the base cases,
+applying the induction hypothesis elsewhere -
+with the exception of \textit{rewindPresId} where we need an additional lemma:
 \begin{lemma}
   If $\sigma : \operatorname{Rpl} \Gamma \; \Gamma'$ such that
-  $\textit{wk} \; \textit{id}_\subseteq \; \sigma$,
-  then for all $m : \Delta \lhd_\text{IK} \Gamma$
-  $$ \textit{rewind} \; m \; (\textit{drop} \; \sigma) = \textit{rewind} \; m \; s $$
-  where $\textit{drop} \coloneqq \textit{wk} \; (\operatorname{weak} \; \textit{id}_\subseteq)$.
+  $\textit{wk}_{\operatorname{Rpl}} \; \textit{id}_\subseteq \; \sigma = \sigma$,
+  then for all $m : \Delta \lhd_{\lambda_\text{IK}} \Gamma$
+  $$ \textit{rewind} \; m \; (\textit{drop} \; \sigma) = \operatorname{snoc} m' , \sigma' \quad \text{where } m' , \sigma' = \textit{rewind} \; m \; \sigma $$
+  where $\textit{drop} \coloneqq \textit{wk}_{\operatorname{Rpl}} \; (\operatorname{weak} \; \textit{id}_\subseteq)$
+  weakens $\sigma$ by appending an additional assumption to the target context $\Gamma'$.
 \end{lemma}
-What makes the lemma provable is that all IK modal accessibility relations,
-($\lhd_\text{IK}$), start with a \lock (see the $\operatorname{base}$ constructor).
-The function $\textit{drop}$ only affects
-the part of the context to the left of the lock,
-which will be removed by the $\textit{rewind}$ operation.
+\begin{proof}
+  The $\lambda_\text{IK}$ modal accessibility relation $m$,
+  viewed as a context extension from $\Delta$ to $\Gamma$,
+  starts with a \lock{} (see the $\operatorname{base}$ constructor).
+  The function \textit{drop} only affects the part of $\sigma$
+  pertaining to that right of the lock,
+  which will be removed by the \textit{rewind} operation.
+\end{proof}
+
+\section{Intuitionistic S4}
+
+For $\lambda_\text{IS4}$, the modal accessibility relation,
+which has to be reflexive and transitive \cite{huth04},
+is succinctly defined as
+$\Delta \lhd \Gamma \coloneqq \exists \Xi.\, (\Gamma = \Delta, \Xi)$,
+i.e. the existence of a context extension from $\Delta$ to $\Gamma$,
+as done by \textcite{valliappan22},
+except it makes \textit{rewindPresId} impossible to implement without modifications.
+The reason for this is that the argument made in \autoref{sec:ik}
+for the \textit{rewindPresId} parameter of $\lambda_\text{IK}$,
+does not apply here as the $(\lhd)$ in question does not necessarily start with a \lock.
+Instead, their formalization adds an additional conversion rule for $\lambda_\text{IS4}$ that we omit
+\begin{equation*}
+  \inferrule
+      [Shift-$\operatorname{unbox}$]
+      {\Delta \vdash t : \Box A \\ e : \Xi \\ \Delta, \Xi \lhd \Gamma}
+      {\operatorname{unbox} \; t \; (e \circ m) \sim \operatorname{unbox} \; (\textit{wk} \; (\textit{to}_\subseteq \; e) \; t) \; m}
+      \mathrlap{\; \lock \notin \Xi}
+\end{equation*}
+and requires substitution with the identity substitution
+to only preserve terms up to conversion,
+and likewise for the right identity of substitution composition.
+
+The $(\lhd_{\lambda_\text{IS4}})$ definition used in this development,
+see \autoref{fig:is4-m},
+is therefore both an opportunity to try an alternative approach,
+and, in at least one aspect, simpler,
+due to $\textit{rewindPresId}$ only having to be shown once,
+instead of being duplicated for both $\textit{subst}$ and substitution composition.
+It can either be explicitly reflexive (the $\operatorname{refl}$ constructor),
+or any context extension that starts with a \lock{} (the $\operatorname{ext}$ constructor).
+With $\operatorname{ext}$ alone it would not be reflexive which, recall,
+is a defining factor of IS4,
+thereby the addition of $\operatorname{refl}$.
+
+\begin{figure}
+  \centering
+  \begin{equation*}
+    \inferrule{}{\operatorname{refl} : \Gamma \lhd_{\lambda_\text{IS4}} \Gamma} \qquad
+    \inferrule{e : \operatorname{Ext} \; (\Delta , \lock) \; \Gamma}{\operatorname{ext} e : \Delta \lhd_{\lambda_\text{IS4}} \Gamma}
+  \end{equation*}
+  \begin{equation*}
+    \inferrule{}{\operatorname{nil} : \operatorname{Ext} \; \Gamma \; \Gamma} \qquad
+    \inferrule{e : \operatorname{Ext} \; \Gamma \; \Delta}{\operatorname{snoc} \; e : \operatorname{Ext} \; \Gamma \; (\Delta , A)} \qquad
+    \inferrule{e : \operatorname{Ext} \; \Gamma \; \Delta}{\operatorname{snoc}_\lock \; e : \operatorname{Ext} \; \Gamma \; (\Delta , \lock)}
+  \end{equation*}
+  \caption{Modal accessibility relation for $\lambda_\text{IS4}$.
+    The datatype $\operatorname{Ext} \; \Gamma \; \Delta$ is a constructive proof
+    of the existence of a context extension from $\Gamma$ to $\Delta$.
+    \label{fig:is4-m}}
+\end{figure}
+
+The implementations of $\textit{rewind}_\subseteq$ and \textit{rewind}
+are similar to their $\lambda_\text{IK}$ counterparts,
+with the addition of a $\operatorname{ext} \; (\operatorname{snoc}_\lock \; \_)$ case
+that needs to be handled, i.e.\@ for \textit{rewind}:
+\begin{multline*}
+  \textit{rewind} \; (\operatorname{ext} \; (\operatorname{snoc}_\lock \; m)) \; (\operatorname{lock} \; \sigma \; m_2) \\
+  = \textit{trans}_\lhd \; m' \; m_2 , \sigma' \quad \text{where } m' , \sigma' = \textit{rewind} \; (\operatorname{ext} \; m) \; \sigma
+\end{multline*}
+where $\textit{trans}_\lhd$ is $(\lhd_{\lambda_\text{IS4}})$ composition.
+Here, compared to the base case $\operatorname{ext} \; \operatorname{nil}$,
+which is the same as for $\lambda_\text{IK}$ in \autoref{eq:ik-rewind}, which see,
+rewinding needs to recurse on $\sigma$ from the $\operatorname{lock}$ constructor,
+as the modal accessibility relation spans multiple \lock:s.
+This gives two modal accessibility relations, $m'$ and $m_2$,
+that need to be combined,
+and complicates subsequent proofs of the parameters
+$\textit{rewindPres-}\circ$ and \textit{rewindWk} quite a bit,
+which need a lemma:
+\begin{lemma}[The \textit{rewind} operation distributes over $(\lhd_{\lambda_\text{IS4}})$ composition]\label{thm:rewindPresTrans}
+  If $m_1 : \Gamma \lhd \Gamma'$, $m_2 : \Gamma' \lhd \Gamma''$, $\sigma : \operatorname{Rpl} \; \Gamma'' \; \Delta$ and
+  \begin{equation*}
+    \begin{array}{l@{\,}l@{}l}
+      m_2', &\sigma'  &\coloneqq \textit{rewind} \; m_2 \; \sigma \\
+      m_1', &\sigma'' &\coloneqq \textit{rewind} \; m_1 \; \sigma'
+    \end{array}
+  \end{equation*}
+  then
+  $$ \textit{rewind} \; (\textit{trans}_\lhd \; m_1 \; m_2) \; \sigma = \textit{trans}_\lhd \; m_1' \; m_2' , \sigma'' $$
+\end{lemma}
+
+For instance, in the $\operatorname{ext} \; (\operatorname{snoc}_\lock \; \_)$ case of $\textit{rewindPres-}\circ$
+(recall its definition in \autoref{eq:rewindPres-circ}):
+$$ \textit{rewindPres-}\circ \; (\operatorname{ext} \; (\operatorname{snoc}_\lock \; m)) \; (\operatorname{lock} \; \sigma_1 \; m_2) \; \sigma_2 = \, ? $$
+it needs to be shown that
+\begin{align*}
+  &\textit{trans}_\lhd \; (\pi_1 \; X) \; (\pi_1 \; (\textit{rewind} \; m_2 \; \sigma_2)) , \pi_2 \; X \\
+  &\quad \stackrel?= \pi_1 \; (\textit{rewind} \; (\textit{trans}_\lhd \; (\pi_1 \; (\textit{rewind} \; (\operatorname{ext} m) \; \sigma_1)) \; m_2) \; \sigma_2) \\
+  &\qquad , \pi_2 \; (\textit{rewind} \; (\operatorname{ext} m) \; \sigma_1) \circ \pi_2 \; (\textit{rewind} \; (\textit{trans}_\lhd \; (\pi_1 \; (\textit{rewind} \; (\operatorname{ext} m) \; \sigma_1)) \; m_2) \; \sigma_2)
+\end{align*}
+where $X \coloneqq \textit{rewind} \; (\operatorname{ext} m) \; (\sigma_1 \circ \pi_2 \; (\textit{rewind} \; m_2 \; \sigma_2))$.
+Applying the induction hypothesis on $X$ yields the new left-hand side
+\begin{multline*}
+  \textit{trans}_\lhd \; (\pi_1 \; (\textit{rewind} \; (\pi_1 \; (\textit{rewind} \; (\operatorname{ext} m) \; \sigma_1)) \; (\pi_2 \; (\textit{rewind} \; m_2 \; \sigma_2)))) \; (\pi_1 \; (\textit{rewind} \; m_2 \; \sigma_2)) \\
+  , \pi_2 \; (\textit{rewind} \; (\operatorname{ext} m) \; \sigma_1) \circ \pi_2 \; (\textit{rewind} \; (\pi_1 \; (\textit{rewind} \; (\operatorname{ext} m) \; \sigma_1)) \; (\pi_2 \; (\textit{rewind} \; m_2 \; \sigma_2)))
+\end{multline*}
+Here, applying \autoref{thm:rewindPresTrans} with
+$m_1 \coloneqq \pi_1 \; (\textit{rewind} \; (\operatorname{ext} \; m) \; \sigma_1)$,
+$m_2 \coloneqq m_2$ and $\sigma \coloneqq \sigma_2$,
+in order to move $\textit{trans}_\lhd$ into the \textit{rewind} call
+and merge the two \textit{rewind}:s right of $(\circ)$,
+gives the right-hand side.
+
+Note that all $\lambda_\text{IS4}$ parameters have been proven in Agda\footnote{
+See the \texttt{add-is4} branch in the Git repository.},
+except for $\textit{rewindPresId}$ which thus far only has a proof on paper,
+due to insufficient time.
 
 \chapter{Future Work}
 
