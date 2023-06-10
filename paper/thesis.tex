@@ -787,6 +787,28 @@ are equal up to the conversion.
     \label{fig:eq-theory}}
 \end{figure}
 
+\section{Summary of Calculus Parameters}
+
+Because calculus parameters have been introduced on a per-need basis,
+this section collects all parameters thus far.
+These are sufficient for stating the syntax,
+and the semantics in \autoref{sec:normalization},
+however, \autoref{sec:correctness} introduces a further set of parameters,
+restricting the calculi that may be instantiated enough
+such that it is possible to prove correctness.
+
+\begin{itemize}
+\item A modal accessibility relation $\Delta \lhd \Gamma$ between contexts
+  is required;
+\item and a context obtained by appending a new empty local context
+  to some context $\Gamma$ should be related to $\Gamma$:
+  $$ \lhd_\lock : \Gamma \lhd (\Gamma , \lock) $$
+\item OPE:s can be rewound according to a modal accessibility relation:
+  $$ \textit{rewind}_\subseteq : (m : \Gamma'\lhd\Gamma) \to (w : \Gamma\subseteq\Delta) \to \exists \Delta'. \, \Delta'\lhd\Delta \times \Gamma'\subseteq\Delta' $$
+\item and similarly for $\operatorname{Rpl}$:s such as substitutions:
+  $$ \textit{rewind} : (m : \Gamma'\lhd\Gamma) \to (\sigma : \operatorname{Rpl} \Gamma \; \Delta) \to \exists \Delta'. \, \Delta'\lhd\Delta \times \operatorname{Rpl} \Gamma' \; \Delta' $$
+\end{itemize}
+
 \chapter{Normalization Algorithm}\label{sec:normalization}
 
 We provide a Normalization by Evaluation algorithm based on a possible worlds model
