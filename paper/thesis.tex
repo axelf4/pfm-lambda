@@ -1342,25 +1342,110 @@ See the \texttt{add-is4} branch in the Git repository.},
 except for $\textit{rewindPresId}$ which thus far only has a proof on paper,
 due to insufficient time.
 
-\chapter{Future Work}
+\chapter{Conclusion}\label{sec:conclusion}
 
-One point to investigate is whether to replace OPE:s with renamings,
+We have given a parametric Fitch-style modal lambda calculus
+and shown how to instantiate the calculi $\lambda_\text{IK}$ and $\lambda_\text{IS4}$.
+This was done by making the relation between
+the contexts involved in the $\operatorname{unbox}$ operation a parameter,
+and proceeding to attempt to prove the usual syntactic lemmas
+needed to prove correctness of NbE for lambda calculi,
+adding additional calculus parameters when stuck.
+Ultimately, the objective of formulating a parametric calculus
+can be considered to have been met.
+
+An avenue that was initially explored, was requiring $(\lhd)$ to be a context extension,
+as it is in both instantiations given in \autoref{sec:instantiations},
+and thereby reduce the amount of work needed when instantiating.
+Instead more of the syntactic lemmas would able to be proved
+directly in the parametric calculus.
+For example, it could be done in such a way that the
+$\lhd_\lock$, $\textit{rewind-$\lhd_\lock$}$ and $\textit{rewind$_\subseteq$-$\lhd_\lock$}$
+parameters become implicit.
+This was abandoned, however,
+as the convenience did not outweigh the perceived loss of generality.
+
+The parallel between lambda abstractions and boxes,
+where similar to how lambdas are applied by supplying an argument value,
+boxes can be seen as instead being applied with a modal accessibility relation,
+helped when doing the correctness proofs.
+Frequently,
+this symmetry meant cases concerning $\operatorname{box}$ and $\operatorname{unbox}$
+could be somewhat inferred from looking at the equivalent STLC proofs.
+Therefore the main difficulties were
+proving the substitution laws while simultaneously formulating the parameters,
+and choosing a representation of $(\simeq_\text{ctx})$ such that it could be rewound.
+
+The Kripke-style calculus and its normalization by evaluation algorithm by \textcite{hu23},
+are undoubtedly similar to the topic of this thesis.
+Indeed, the differences between Fitch- and Kripke-style calculi are purely syntactical.
+Still, the previous lack of generality of Fitch-style calculi has been quoted \cite{hu18}
+as an apparent disadvantage of Fitch-style compared to Kripke-style;
+the results in this thesis show that this is not altogether the case.
+It is worth mentioning that the Fitch-style is closer to the
+categorical semantics given by \textcite{clouston18}.
+One has to concede, however, that the Kripke-style formulation is simpler:
+The modal accessibility relation is represented as a single integral modal offset,
+instead of a proof witness that is carried around of how the past and future contexts are related.
+
+This raises the question of whether the Fitch-style accessibility relation being more general
+can be meaningful in some way.
+One possible setback of the way things have been done in this thesis,
+is that the calculus parameter $\lhd_\lock$ imposes too strict a requirement
+on the accessibility relation $(\lhd)$.
+For example, a version of $\lambda_\text{IS4}$
+where $\Delta \lhd \Gamma$ if removing all \lock:s that occur in $\Gamma$ gives $\Delta$ -
+effectively used in \cite{gratzer19} -
+is not an instance of the parametric calculus,
+instead one would have to also allow e.g.\@ the removal of any number of locks.
+That said, the current inclusion of $\lhd_\lock$ does arise naturally
+from the need for identity substitutions.
+
+The formalization in \autoref{sec:calculus} made use of the parametric construct $\operatorname{Rpl}$,
+in order to cut down on repetition.
+\textcite{allais17} demonstrated how the concept can be taken further.
+Their result is similar in that renamings, substitutions and semantic environments
+may be represented uniformly,
+however they go beyond that by implementing a generic term traversal
+that may be instantiated to obtain
+renaming and substituting of terms and normalization by evaluation, i.a.
+Specially useful is how this allows for succinctly proving fusion lemmas,
+e.g.\@ that substitution followed by renaming can be subsumed by a single substitution.
+Compared to $\operatorname{Rpl}$,
+their definition of generalized substitutions uses a function space instead of a datatype,
+i.e.\@ substitutions are instances of $\Gamma \ni A \to \Delta \vdash A$,
+however this poses problems once modalities are introduced.
+With a datatype, interactions with context locks are limited
+by what the $\operatorname{lock}$ constructor allows.
+With functions we are always able to give a proof of
+$\Gamma, \lock \ni A \to \Delta \vdash A$ for any $\Delta$,
+as $\Gamma, \lock \ni A$ is uninhabited
+since no variables exist to the right of the lock.
+This is problematic when using renamings as context morphisms,
+since lock weakening is not in general allowed in modal lambda calculi.
+
+A potential for future work is to investigate whether to replace OPE:s with renamings,
 i.e. substitutions where the replacement terms are variables.
 Not only would this remove
-some $\textit{rewind}_\subseteq$/$\textit{rewind}$ repetition,
+some $\textit{rewind}_\subseteq$/$\textit{rewind}$ repetition in the parameters,
 but it would also be a step toward being able to add the \emph{R axiom}
 ($A \to \Box A$).
 \textcite{valliappan-r} showed that the condition
 $$ R_m \subseteq R_i $$
-on $R_i$ and $R_m$,
-the intuitionistic and modal accessibility relation, respectively,
+on $R_i$ and $R_m$, the intuitionistic and modal accessibility relation, respectively,
 is sufficient for ensuring axiom R is satisfied in the model
 (with the IR \textsc{Var} rule and corresponding OPE definition).
 Unlike with OPE:s as given here,
-the condition holds when picking renamings for $R_i$,
-since renamings encapsulate lock weakenings.
+the condition holds when picking renamings for the intuitionistic accessibility relation,
+since renamings encapsulate lock weakenings through the $\operatorname{lock}$ constructor.
 
-\chapter{Conclusion}\label{sec:conclusion}
+Finally,
+another thing that was planned in case extra time presented itself by the end of the project,
+was implementing supplementary language extensions,
+such as Booleans, and/or pattern matching.
+Any extension that does not interact with the modal fragment should not pose difficulty,
+and it would have been nice to exercise this.
+Unfortunately, there was not enough time for this.
 
 \cleardoublepage
 \printbibliography[heading=bibintoc]
