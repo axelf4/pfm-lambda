@@ -20,7 +20,9 @@
         inherit (texlive) scheme-basic latexmk luatex
           biber biblatex biblatex-ieee
           pgf mathtools stmaryrd mathpartir listings
-          parskip titlesec microtype;
+          parskip titlesec microtype
+
+          beamer booktabs;
         inherit fitch;
       };
     in {
