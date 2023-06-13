@@ -601,7 +601,7 @@ the concrete modal accessibility relation in question.
   \begin{align*}
     &\inferrule[$\lambda_\text{IK}$/\Box-Elim]
     {\Gamma \vdash t : \Box A}
-    {\Gamma, \Gamma' \vdash \unbox_{\lambda_\text{IK}} t : A}
+    {\Gamma, \lock, \Gamma' \vdash \unbox_{\lambda_\text{IK}} t : A}
     \; \lock \notin \Gamma' &
     &\inferrule[$\lambda_\text{IT}$/\Box-Elim]
           {\Gamma \vdash t : \Box A}
@@ -819,8 +819,7 @@ Normal and neutral forms are defined mutually as:
   \inferrule{x : \text{Nf} \; (\Gamma, A) \; B}{\operatorname{abs} x : \text{Nf} \; \Gamma \; (A \to B)} \quad
   \inferrule{x : \text{Nf} \; (\Gamma, \lock) \; A}{\operatorname{box} x : \text{Nf} \; \Gamma \; (\Box A)} \\
   \inferrule{x : A \in \Gamma}{\operatorname{var} x : \text{Ne} \; \Gamma \; A} \quad
-  \inferrule{x : \text{Ne} \; \Gamma \; (A \to B) \\ y : \text{Nf} \; \Gamma \; A}
-            {x \; y : \text{Ne} \; \Gamma \; B} \quad
+  \inferrule{x : \text{Ne} \; \Gamma \; (A \to B) \\ y : \text{Nf} \; \Gamma \; A}{x \; y : \text{Ne} \; \Gamma \; B} \quad
   \inferrule{x : \text{Ne} \; \Delta \; (\Box A) \\ m : \Delta\lhd\Gamma}{\operatorname{unbox} x \; m : \text{Ne} \; \Gamma \; A}
 \end{gather*}
 The normal forms are $\beta$-normal - no $\beta$-reductions are possible -
@@ -885,9 +884,9 @@ respectively.
     &\downarrow^{A \to B} a &&\coloneqq \operatorname{abs} \; (\downarrow^B (a \; (\operatorname{weak} \textit{id}_\subseteq) \; (\uparrow^A (\operatorname{var} \operatorname{zero})))) \\
     &\downarrow^{\Box A} a &&\coloneqq \operatorname{box} \; (\downarrow^A (a \; \textit{id}_\subseteq \; \lhd_\lock)) \\
     &\mathrlap{\text{Reflection} \quad \uparrow^A : \operatorname{Ne} \; \Gamma \; A \to \llbracket A \rrbracket_\Gamma} &&\\
-    &\uparrow^\iota x &&\coloneqq \operatorname{nt} a \\
+    &\uparrow^\iota x &&\coloneqq \operatorname{nt} x \\
     &\uparrow^{A \to B} x &&\coloneqq \lambda w \; a.\, \uparrow^B ((\operatorname{wk}_{\operatorname{Ne}} w \; x) \; (\downarrow^A a)) \\
-    &\uparrow^{\Box A} x &&\coloneqq \lambda a.\, \uparrow^B (\operatorname{unbox} \; (\operatorname{wk}_{\operatorname{Ne}} w \; x) \; m)
+    &\uparrow^{\Box A} x &&\coloneqq \lambda w \; m.\, \uparrow^B (\operatorname{unbox} \; (\operatorname{wk}_{\operatorname{Ne}} w \; x) \; m)
   \end{align*}
   \caption{Evaluation, reification and reflection definitions. \label{fig:nbe}}
 \end{figure}
