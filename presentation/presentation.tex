@@ -15,10 +15,10 @@
 
 \DeclareMathOperator\unbox{unbox}
 
-\title{A Parametric Fitch-style Modal Lambda Calculus}
+\title{A Parametric Fitch-style \\ Modal Lambda Calculus}
 \author{Axel Forsman}
 \institute[CTH]{Chalmers University of Technology}
-\date{\today}
+\date{June 15, 2023}
 
 \begin{document}
 
@@ -39,7 +39,7 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Example: S4 modality for staged computation}
+\begin{frame}{Example: S4 modality for run-time codegen}
   \begin{columns}
     \begin{column}{.49\textwidth}
       \begin{itemize}
@@ -137,26 +137,30 @@
             {\Gamma, \Gamma' \vdash \unbox_{\lambda_\text{S4}} t : A}
     \end{align*}
     \caption{$\operatorname{unbox}$ rules from
-      Valliappan, N., Ruch, F., \& Tomé Cortiñas, C. (2022). Normalization for fitch-style modal calculi.}
+      Clouston, R. (2018). Fitch-style modal lambda calculi.}
   \end{figure}
+
+  Normalization has been given by
+  Valliappan, N., Ruch, F., \& Tomé Cortiñas, C. (2022). Normalization for fitch-style modal calculi.
 \end{frame}
 
-\begin{frame}{Parametric $\unbox$ rule}
-  Given a \emph{modal accessibility relation} $\Delta \lhd \Gamma$,
-  \begin{equation*}
-    \inferrule{\Delta \vdash t : \Box A \\ \Delta \lhd \Gamma}{\Gamma \vdash \operatorname{unbox} t : A}
-  \end{equation*}
+\begin{frame}{Key idea: Parametric $\unbox$ rule}
+  \begin{itemize}
+    \item Given a \emph{modal accessibility relation} $\Delta \lhd \Gamma$,
+      \begin{equation*}
+        \inferrule{\Delta \vdash t : \Box A \\ \Delta \lhd \Gamma}{\Gamma \vdash \operatorname{unbox} t : A}
+      \end{equation*}
+    \item This gives a \emph{single} parametric calculus
+  \end{itemize}
 \end{frame}
 
 \begin{frame}{Substitutions}
   $$ \textit{subst} : (\sigma : \operatorname{Sub} \, \Gamma \; \Delta) \to \Gamma \vdash A \to \Delta \vdash A $$
 
   \begin{equation*}
-    \inferrule{ }{\cdot : \operatorname{Sub} \cdot \; \Delta} \quad
+    \inferrule{ }{\cdot : \operatorname{Sub} \cdot \; \Delta} \qquad
     \inferrule{\sigma : \operatorname{Sub} \Gamma \; \Delta \\ t : \Delta \vdash A}
-              {\sigma, t : \operatorname{Sub} \; (\Gamma, A) \; \Delta} \quad
-    \inferrule{\sigma : \operatorname{Sub} \Gamma \; \Delta}
-              {\operatorname{lift}_\lock \sigma : \operatorname{Sub} \; (\Gamma, \lock) \; (\Delta, \lock)}
+              {\sigma, t : \operatorname{Sub} \; (\Gamma, A) \; \Delta}
   \end{equation*}
 \end{frame}
 
@@ -168,23 +172,18 @@
   \end{equation*}
 \end{frame}
 
-\begin{frame}[fragile]
+\begin{frame}[fragile]{Implementing \textit{subst}}
   \begin{align*}
-    &\textit{subst} \; &&(\sigma, x) \; &&(\operatorname{var} \operatorname{i0}) &&= x \\
-    &\textit{subst} \; &&(\sigma, \_) \; &&(\operatorname{var} \; (\operatorname{is} v)) &&= \textit{subst} \; \sigma \; (\operatorname{var} v) \\
-    & \cdots \\
-    &\textit{subst} \; &&\sigma \; &&(\operatorname{box} t) &&= \operatorname{box} \; (\textit{subst} \; (\operatorname{lock} \sigma \; \tikznode{lhd1}{$\lhd_\lock$}) \; t) \\
-    &\textit{subst} \; &&\sigma \; &&(\operatorname{unbox} t \; m) &&= \operatorname{unbox} \; (\textit{subst} \; \sigma' \; t) \; m' \\
+    &\cdots \\
+    &\textit{subst} \; &&\sigma \; &&(\operatorname{box} t) &&\coloneqq \operatorname{box} \; (\textit{subst} \; (\operatorname{lock} \sigma \; \tikznode{lhd1}{$\lhd_\lock$}) \; t) \\
+    &\textit{subst} \; &&\sigma \; &&(\operatorname{unbox} t \; m) &&\coloneqq \operatorname{unbox} \; (\textit{subst} \; \sigma' \; t) \; m' \\
     &\mathrlap{\quad \text{where } m', \sigma' = \textit{rewind} \; m \; \sigma}
   \end{align*}
   \tikz[remember picture,overlay]{
-    \draw (lhd1.north) -- ++(.5cm,1.5cm) node[anchor=south] {$\lhd_\lock : \Gamma \lhd \Gamma, \lock$};
+    \draw (lhd1.north) -- ++(.5cm,1cm) node[anchor=south] {$\lhd_\lock : \Gamma \lhd \Gamma, \lock$};
   }
-\end{frame}
-
-\begin{frame}{Rewinding substitutions}
-  \begin{figure}
-    \centering
+  \pause
+  \begin{center}
     \begin{tikzpicture}
       \node (Γ) at (1,1) {$\Gamma$};
       \node (Γ') at (3,1) {$\Gamma\mathrlap'$};
@@ -195,11 +194,7 @@
       (Δ') edge[-,dashed] node[auto=right] {$m'$} (Γ')
       edge[<-,dashed,bend left=15] node[below] {$\sigma'$} (Δ);
     \end{tikzpicture}
-    \caption{Given a modal accessibility relation $m : \Delta \lhd \Gamma$,
-      $\Delta$ being some past world,
-      $\textit{rewind} \; m \; \sigma$ yields $\sigma'$ and $m'$
-      for some context $\Delta'$.}
-  \end{figure}
+  \end{center}
 \end{frame}
 
 \begin{frame}{Equational theory}
@@ -211,18 +206,18 @@
   \end{align*}
 \end{frame}
 
-\begin{frame}{Normalization}
+\begin{frame}{Normalization by Evaluation}
   $$ nf : \Gamma \vdash A \to \text{Nf} \; \Gamma \; A $$
 
   \begin{gather*}
     \inferrule{x : \text{Ne} \; \Gamma \; \iota}{\operatorname{ne} x : \text{Nf} \; \Gamma \; \iota} \quad
-%%     \inferrule{x : \text{Nf} \; (\Gamma, A) \; B}{\operatorname{abs} x : \text{Nf} \; \Gamma \; (A \to B)} \quad
+    \cdots\quad
     \inferrule{x : \text{Nf} \; (\Gamma, \lock) \; A}{\operatorname{box} x : \text{Nf} \; \Gamma \; (\Box A)}
   \end{gather*}
   \pause
   \begin{gather*}
     \inferrule{x : A \in \Gamma}{\operatorname{var} x : \text{Ne} \; \Gamma \; A} \quad
-%%     \inferrule{x : \text{Ne} \; \Gamma \; (A \to B) \\ y : \text{Nf} \; \Gamma \; A}{x \; y : \text{Ne} \; \Gamma \; B} \\
+    \cdots\quad
     \inferrule{x : \text{Ne} \; \Delta \; (\Box A) \\ m : \Delta\lhd\Gamma}{\operatorname{unbox} x \; m : \text{Ne} \; \Gamma \; A}
   \end{gather*}
 \end{frame}
@@ -236,12 +231,12 @@
     \end{split}
   \end{equation*}
 
-  Environments $\gamma : \operatorname{Env} \Gamma \Delta$
+  Environments $\gamma : \operatorname{Env} \Gamma \; \Delta$
 \end{frame}
 
 \begin{frame}
   \begin{align*}
-    &\mathrlap{\text{Evaluation} \quad \llbracket-\rrbracket : \Gamma \vdash t : A \to \forall\Delta. \, \llbracket\Gamma\rrbracket_\Delta \to \llbracket A \rrbracket_\Delta} &&\\
+    &\mathrlap{\text{Evaluation} \quad \llbracket-\rrbracket : \Gamma \vdash A \to \forall\Delta.\, \operatorname{Env} \Gamma \; \Delta \to \llbracket A \rrbracket_\Delta} &&\\
     &\llbracket x \rrbracket \; \gamma &&\coloneqq \text{lookup } x \text{ in } \gamma \\
     &\llbracket \operatorname{box} t \rrbracket \; \gamma &&\coloneqq \lambda w \; m.\, \llbracket t \rrbracket \; (\operatorname{lock} \; (\operatorname{wk}_e w \; \gamma) \; m) \\
     &\llbracket \operatorname{unbox} t \; m \rrbracket \; \gamma &&\coloneqq \llbracket t \rrbracket \; \gamma' \; \textit{id}_\subseteq \; m' \quad \text{where } m' , \gamma' = \textit{rewind} \; m \; \gamma \\
@@ -262,6 +257,17 @@
   \item The operation $\textit{rewind}$ should distribute over composition.
   \item $\textit{rewind}$ should preserve identity.
   \item $\textit{rewind}$ should commute with weakening and substitution composition.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Instantiations}
+  \begin{itemize}
+  \item Calculus K:
+    \begin{align*}
+      \Delta \lhd_\text{K} \Gamma &\coloneqq \exists\Xi.\, \lock\notin\Xi \;\text{and}\; (\Gamma = \Delta, \lock, \Xi)
+      \intertext{\item Calculus S4:}
+      \Delta \lhd_\text{S4} \Gamma &\coloneqq (\Gamma = \Delta) \;\text{or}\; (\exists\Xi.\, \Gamma = \Delta, \lock, \Xi)
+    \end{align*}
   \end{itemize}
 \end{frame}
 
