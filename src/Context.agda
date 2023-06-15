@@ -167,6 +167,11 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) where
     (head : {A : Ty} {Γ : Ctx} -> F A (Γ , A))
     where
 
+    -- Looking up a variable in a replacement
+    replaceVar : {Γ Δ : Ctx} {A : Ty} -> Rpl F Γ Δ -> A ∈ Γ → F A Δ
+    replaceVar (_ , x) zero = x
+    replaceVar (σ , _) (suc x) = replaceVar σ x
+
     -- Composition of substitution and weakening
     wk : {Γ Δ Δ' : Ctx} -> Δ ⊆ Δ' -> Rpl F Γ Δ -> Rpl F Γ Δ'
     wk w · = ·
