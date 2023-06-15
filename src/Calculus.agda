@@ -81,11 +81,7 @@ module Sub = Rpl.Properties (λ A Δ -> Δ ⊢ A)
   wk (var zero)
 
 subst : {Γ Δ : Ctx} {A : Ty} -> Sub Γ Δ -> Γ ⊢ A -> Δ ⊢ A
-subst σ (var x) = substVar σ x
-  where
-    substVar : {Γ Δ : Ctx} {A : Ty} -> Sub Γ Δ -> A ∈ Γ -> Δ ⊢ A
-    substVar (_ , x) zero = x
-    substVar (σ , _) (suc x) = substVar σ x
+subst σ (var x) = Sub.replaceVar σ x
 subst σ (abs x) = abs (subst (Sub.liftRpl σ) x)
 subst σ (app x y) = app (subst σ x) (subst σ y)
 subst σ (box x) = box (subst (lock σ ◁1) x)
