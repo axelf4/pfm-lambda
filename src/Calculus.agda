@@ -471,8 +471,7 @@ wkEnvId (lock γ m) = ≡.trans
 wkEnvPres-● = Env.wkPres-● rewind-⊆-pres-● wkTy'Pres-●
 
 lookup : {A : Ty} {Γ Δ : Ctx} -> A ∈ Γ -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
-lookup zero (_ , A') = A'
-lookup (suc x) (γ , _) = lookup x γ
+lookup x γ = Env.replaceVar γ x
 
 -- Evaluation: Interpret terms-in-contexts as natural transformations
 ⟦_⟧tm : {Γ : Ctx} {A : Ty} -> Γ ⊢ A -> {Δ : Ctx} -> ⟦ Γ ⟧ctx Δ -> ⟦ A ⟧ty Δ
