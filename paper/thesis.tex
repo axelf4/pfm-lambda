@@ -189,13 +189,13 @@ Axel Forsman, Gothenburg, \today
 \chapter{Introduction}
 
 In this thesis we consider the so called \emph{necessity modality},
-and go on to give a parametric modal lambda calculus in the Fitch-style,
+and go on to give a parametric modal lambda calculus in the Fitch-style
 which integrates the necessity modality.
 
 To see the need for modalities in programming languages,
 it helps to start with understanding the usefulness of type systems.
 Broadly speaking,
-type systems are means of classifying expressions by the values the compute,
+type systems are a means of classifying expressions by the values they compute,
 in order to prove the absence of unsatisfactory program behaviors \cite{pierce02}.
 If two expressions are known to produce strings of characters,
 then trying to add them as if they were instead numbers
@@ -264,11 +264,11 @@ This includes the formulation of the simply typed lambda calculus foundation
 that was present in both.
 Furthermore, this repetition would only continue to increase
 with each additional modal lambda calculus mechanized.
-This in spite of the fact that for all four calculi in question,
+This in spite of the fact that for all four calculi in question
 only the rules surrounding the $\operatorname{unbox}$ operator vary,
 while the $\operatorname{box}$ operator and everything else stay the same.
 
-The contributions of this thesis are therefore
+The contributions of this thesis are therefore:
 \begin{itemize}
 \item The design of a modal lambda calculus
   where the $\operatorname{unbox}$ operator is parametric,
@@ -276,7 +276,7 @@ The contributions of this thesis are therefore
   with a single calculus.
   With the parameter unifying $\operatorname{unbox}$ as a starting point,
   remaining parameters are identified in order to sufficiently define the calculus.
-\item An normalization algorithm
+\item A normalization algorithm
   through the Normalization by Evaluation \cite{berger91} technique;
 \item and a proof of its correctness.
 \end{itemize}
@@ -455,8 +455,7 @@ containing enough information about its origins to make reification possible.
 Modal logic has been adapted for modal lambda calculi \cite{borghuis94},
 where modalities are type constructors that add some properties.
 In place of the K inference rules, \textsc{K-Export} and \textsc{K-Import},
-is two new operators $\operatorname{box}$ and $\operatorname{unbox}$
-respectively.
+are two new operators $\operatorname{box}$ and $\operatorname{unbox}$ respectively.
 To keep track of subordinate proofs in typing judgments
 a new structural connective \lock{} is added to the context when a \Box{} is eliminated,
 and popped when the subproof is closed.
@@ -518,21 +517,21 @@ and is not automatically kept around with the generated code.
 As an example, multiplication with run-time specialization may be written
 in this framework as
 \begin{center}
-\begin{tabular}{c}
-\begin{lstlisting}[mathescape=true,morekeywords={if,then,else,box,unbox},columns=flexible]
+  \begin{tabular}{c}
+    \begin{lstlisting}[mathescape=true,morekeywords={if,then,else,box,unbox},columns=flexible]
 mult : $\mathbb N \to \Box (\mathbb N \to \mathbb N)$
 mult = $\lambda$n : $\mathbb N$. if n = 0
     then box ($\lambda$m. 0)
     else box ($\lambda$m. m + unbox (mult (n - 1)) m)
-\end{lstlisting}
-\end{tabular}
+    \end{lstlisting}
+  \end{tabular}
 \end{center}
 Now multiplication by zero becomes a constant function
 \begin{align*}
   \textit{mult} \; 0 \mapsto^* &\operatorname{box} \; (\lambda \_.\, 0)
   \intertext{and for other values, the entire \textit{mult} function is inlined}
   \textit{mult} \; 2 \mapsto^* &\operatorname{box} \; (\lambda x.\, x + (\lambda y.\, y + (\lambda z.\, 0) \; y) \; x) \\
-  = &\operatorname{box} \; (\lambda x.\, x + x)
+  = &\operatorname{box} \; (\lambda x.\, x + (x + 0))
 \end{align*}
 
 \section{Previous Work}
@@ -648,14 +647,14 @@ for example
     \draw ([yshift=1mm] x1.north) -- ++(0,.4\baselineskip) -| (l2.north);
     \draw ([yshift=1mm] x2.north) -- ++(0,.4\baselineskip) -| (l3.north);
     \draw ([yshift=1mm] x3.north) -- ++(0,.75\baselineskip) -| (l1.north);
-    \draw ([yshift=-1mm]x4.south) -- ++(0,-.4\baselineskip) -| ([yshift=-1mm] l4.south);
+    \draw ([yshift=-1mm] x4.south) -- ++(0,-.4\baselineskip) -| ([yshift=-1mm] l4.south);
   }
 \end{equation*}
 
 \begin{figure}
   \centering
   \begin{align*}
-    &\inferrule[Var]{ }{\Gamma, x : A, \Gamma' \vdash x : A} \; \lock \notin \Gamma' &
+    &\inferrule[Var]{x = \lvert\Gamma'\rvert}{\Gamma, A, \Gamma' \vdash x : A} \; \lock \notin \Gamma' &
     &\inferrule[\to-Intro]{\Gamma, A \vdash t : B}{\Gamma \vdash \lambda t : A \to B} &
     &\inferrule[\to-Elim]{\Gamma \vdash t : A \to B \\ \Gamma \vdash s : A}{\Gamma \vdash t \; s : B}
   \end{align*}
@@ -792,7 +791,7 @@ are equal up to the conversion.
 Because calculus parameters have been introduced on a per-need basis,
 this section collects all parameters thus far.
 These are sufficient for stating the syntax,
-and the semantics in \autoref{sec:normalization},
+and the semantics in \autoref{sec:normalization};
 however, \autoref{sec:correctness} introduces a further set of parameters,
 restricting the calculi that may be instantiated enough
 such that it is possible to prove correctness.
@@ -857,7 +856,9 @@ The normalization function may then be given as
   Given a term $\Gamma \vdash t : A$,
   normalization yields a normal form $\operatorname{Nf} \; \Gamma \; A$,
   $$ \textit{nf} \; t \coloneqq \, \downarrow^A (\llbracket t \rrbracket \; \textit{id}_e) $$
-  where $\textit{id}_e$ is the identity environment.
+  where $\textit{id}_e$ is the identity environment,
+  which associates each variable $x$ in $\Gamma$
+  with a value given by $\uparrow \operatorname{var} x$.
 \end{definition}
 The algorithm can be summarized as follows:
 Evaluation proceeds as for an interpreter,
@@ -876,9 +877,9 @@ respectively.
     &\mathrlap{\text{Evaluation} \quad \llbracket-\rrbracket : \Gamma \vdash t : A \to \forall\Delta. \, \llbracket\Gamma\rrbracket_\Delta \to \llbracket A \rrbracket_\Delta} &&\\
     &\llbracket x \rrbracket \; \gamma &&\coloneqq \text{lookup } x \text{ in } \gamma \\
     &\llbracket \lambda. \, t \rrbracket \; \gamma &&\coloneqq \lambda w \; \hat a.\, \llbracket t \rrbracket \; (\operatorname{wk}_{\widehat\Gamma} w \; \gamma, \hat a) \\
-    &\llbracket t \; s \rrbracket \; \gamma &&\coloneqq \llbracket t \rrbracket \; \textit{id}_\subseteq \; (\llbracket s \rrbracket \; \gamma) \\
+    &\llbracket t \; s \rrbracket \; \gamma &&\coloneqq \llbracket t \rrbracket \; \gamma \; \textit{id}_\subseteq \; (\llbracket s \rrbracket \; \gamma) \\
     &\llbracket \operatorname{box} t \rrbracket \; \gamma &&\coloneqq \lambda w \; m.\, \llbracket t \rrbracket \; (\operatorname{lock} \; (\operatorname{wk}_{\widehat\Gamma} w \; \gamma) \; m) \\
-    &\llbracket \operatorname{unbox} t \; m \rrbracket \; \gamma &&\coloneqq \llbracket t \rrbracket \; \widehat\Delta \; \textit{id}_\subseteq \; m' \quad \text{where } m' , \widehat\Delta = \textit{rewind} \; m \; \gamma \\
+    &\llbracket \operatorname{unbox} t \; m \rrbracket \; \gamma &&\coloneqq \llbracket t \rrbracket \; \gamma' \; \textit{id}_\subseteq \; m' \quad \text{where } m' , \gamma' = \textit{rewind} \; m \; \gamma \\
     &\mathrlap{\text{Reification} \quad \downarrow^A : \llbracket A \rrbracket_\Gamma \to \operatorname{Nf} \; \Gamma \; A} &&\\
     &\downarrow^\iota a &&\coloneqq a \\
     &\downarrow^{A \to B} a &&\coloneqq \operatorname{abs} \; (\downarrow^B (a \; (\operatorname{weak} \textit{id}_\subseteq) \; (\uparrow^A (\operatorname{var} \operatorname{zero})))) \\
@@ -925,7 +926,7 @@ is used in the proof of its correctness.
   \end{align*}
   where the definition is generic over a function
   $\textit{apply} : \forall A \; \Gamma \; \Delta.\, \operatorname{Rpl}_G \Gamma \; \Delta \to F \; A \; \Gamma \to G \; A \; \Delta$.
-  E.g.\@ for substitution/substitution composition
+  E.g.\@ for composition of substitutions with substitutions
   $\textit{apply}$ will be $\textit{subst}$.
 \end{definition}
 As the source context $\Gamma$ of $\sigma \circ \delta$ is the same as for $\sigma$,
@@ -934,7 +935,7 @@ but differ i.a.\@ in the $(-,-)$ constructor contents
 where $\delta$ is $\textit{apply}$:ed.
 
 Next, we introduce the following additional calculus parameters,
-with which correctness has been proved
+with which correctness has been proved:
 \begin{itemize}
 \item Rewinding $\operatorname{lock} \sigma \; m$
   with a modal accessibility relation $\Gamma \lhd \Gamma, \lock$
@@ -1071,7 +1072,7 @@ Similarly, we show that reification and reflection also respect $(\simeq)$:
 \begin{proof}
   By induction on $A$.
   (Only the $\Box A$ case of (a) is shown here,
-  with the rest left as an exercise to the reader.)
+  with the rest left to the formalization.)
   The proof of $t \simeq \hat t$ says unboxing of $t$ and $\hat t$ respects $(\simeq)$.
   Choosing $w = \textit{id}_\subseteq$ and $m = \lhd_\lock$
   and applying the IH on the result yields
@@ -1099,7 +1100,7 @@ The substitution may be recouped by mapping the $\operatorname{Rpl}$
 with a function that picks the $t$ out of each $A\!\simeq\!\widehat A$,
 likewise for the environment.
 For the proof of the $\operatorname{unbox}$ case of the fundamental theorem,
-an additional calculus parameter is needed
+an additional calculus parameter is needed:
 \begin{itemize}
 \item Rewind should commute with $\textit{map}_{\operatorname{Rpl}}$:
   \begin{multline*}
@@ -1117,15 +1118,14 @@ since a $\textit{rewind}$ instantiation cannot observe
 the contents of the parametric $\operatorname{Rpl}$,
 which is the only thing $\textit{map}_{\operatorname{Rpl}}$ modifies,
 as explained in \citetitle{wadler89} \cite{wadler89}.
-We still need to take it as a parameter however,
-in order to convince Agda.
+We still need to take it as a parameter, however, in order to convince Agda.
 
 \section{Completeness}
 
 For two convertible terms,
 completeness expresses that normalization maps them to the same normal form.
 \begin{theorem}[Completeness]
-  If $\Gamma : t \sim t'$, then $\textit{nf} \; t = \textit{nf} \; t'$.
+  If $t \sim t'$, then $\textit{nf} \; t = \textit{nf} \; t'$.
 \end{theorem}
 
 The standard technique for proving completeness of STLC \cite{altenkirch95,kovacs17}
@@ -1147,7 +1147,7 @@ This allows us to prove naturality for evaluation, reification and reflection.
 For proving completeness, since normalization is evaluation followed by reification,
 it suffices to show the following lemma:
 \begin{lemma}[Evaluation is sound w.r.t. conversion]
-  Given two terms $\Gamma \vdash t \; t' : A$ such that $t \sim t'$
+  Given two terms $\Gamma \vdash t, t' : A$ such that $t \sim t'$
   and an environment $\gamma : \operatorname{Env} \; \Gamma \; \Delta$,
   we have
   $$ \llbracket t \rrbracket \; \gamma = \llbracket t' \rrbracket \; \gamma $$
