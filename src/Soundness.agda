@@ -18,12 +18,12 @@ open import Calculus params
 
 -- Kripke logical relation
 _≈_ : {A : Ty} {Γ : Ctx} -> Γ ⊢ A -> ⟦ A ⟧ty Γ -> Set
-_≈_ {ι} x x' = x ~ ⌜ x' ⌝nf
-_≈_ {A ⟶ B} {Γ} x x' = {Δ : Ctx} -> (w : Γ ⊆ Δ)
+_≈_ {ι} t t' = t ~ ⌜ t' ⌝nf
+_≈_ {A ⟶ B} {Γ} t t' = {Δ : Ctx} -> (w : Γ ⊆ Δ)
   -> {a : Δ ⊢ A} {a' : ⟦ A ⟧ty Δ}
-  -> a ≈ a' -> app (wk w x) a ≈ fst x' w a'
-_≈_ {□ A} {Γ} x x' = {Γ' Δ : Ctx} -> (w : Γ ⊆ Γ') -> (m : Γ' ◁ Δ)
-  -> unbox (wk w x) m ≈ Box'.unbox' x' w m
+  -> a ≈ a' -> app (wk w t) a ≈ fst t' w a'
+_≈_ {□ A} {Γ} t t' = {Γ' Δ : Ctx} -> (w : Γ ⊆ Γ') -> (m : Γ' ◁ Δ)
+  -> unbox (wk w t) m ≈ Box'.unbox' t' w m
 
 -- Transitivity between ~ and ≈ (≈-cons)
 _~◼≈_ : ∀ {A Γ t s} {t' : ⟦ A ⟧ty Γ} -> t ~ s -> s ≈ t' -> t ≈ t'
@@ -52,12 +52,12 @@ record A≈A' (A : Ty) (Γ : Ctx) : Set where
     t' : ⟦ A ⟧ty Γ
     t≈t' : t ≈ t'
 
-wk-≈ : {A : Ty} {Γ Δ : Ctx} {x : Γ ⊢ A} {x' : ⟦ A ⟧ty Γ}
-  -> (w : Γ ⊆ Δ) -> x ≈ x' -> wk w x ≈ wkTy' w x'
-wk-≈ {ι} {x' = x'} w x≈x'
-  = ≡.subst (_ ~_) (≡.sym (⌜⌝nf-nat w x')) (wk-~ w x≈x')
-wk-≈ {A ⟶ B} {x = x} w x≈x' w2 rewrite ≡.sym (wkPres-● w w2 x) = x≈x' (w ● w2)
-wk-≈ {□ A} {x = x} w x≈x' w2 rewrite ≡.sym (wkPres-● w w2 x) = x≈x' (w ● w2)
+wk-≈ : {A : Ty} {Γ Δ : Ctx} {t : Γ ⊢ A} {t' : ⟦ A ⟧ty Γ}
+  -> (w : Γ ⊆ Δ) -> t ≈ t' -> wk w t ≈ wkTy' w t'
+wk-≈ {ι} {t' = t'} w t≈t'
+  = ≡.subst (_ ~_) (≡.sym (⌜⌝nf-nat w t')) (wk-~ w t≈t')
+wk-≈ {A ⟶ B} {t = t} w t≈t' w2 rewrite ≡.sym (wkPres-● w w2 t) = t≈t' (w ● w2)
+wk-≈ {□ A} {t = t} w t≈t' w2 rewrite ≡.sym (wkPres-● w w2 t) = t≈t' (w ● w2)
 
 wk-A≈A' : {A : Ty} {Γ Δ : Ctx} -> (w : Γ ⊆ Δ) -> A≈A' A Γ -> A≈A' A Δ
 wk-A≈A' w record { t = t ; t' = t' ; t≈t' = t≈t' } = record
