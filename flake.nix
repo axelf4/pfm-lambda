@@ -1,10 +1,12 @@
 {
+  description = "A parametric Fitch-style modal lambda calculus";
+
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
+
   outputs = { self, nixpkgs }:
     let
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
-      agda = pkgs.agda.withPackages (ps: with ps; [
-        standard-library
-      ]);
+      agda = pkgs.agda.withPackages (ps: with ps; [ standard-library ]);
 
       fitch.pkgs = [ (pkgs.runCommandLocal "fitch"
         {
@@ -16,8 +18,8 @@
           };
         }
         ''mkdir -p $out/tex/latex && cp $src $out/tex/latex/"$pname".sty'') ];
-      latex = with pkgs; texlive.combine {
-        inherit (texlive) scheme-basic latexmk luatex
+      latex = pkgs.texlive.combine {
+        inherit (pkgs.texlive) scheme-basic latexmk luatex
           biber biblatex biblatex-ieee
           pgf mathtools stmaryrd mathpartir listings
           parskip titlesec microtype;
