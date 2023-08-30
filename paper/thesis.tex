@@ -199,7 +199,7 @@ type systems are a means of classifying expressions by the values they compute,
 in order to prove the absence of unsatisfactory program behaviors \cite{pierce02}.
 If two expressions are known to produce strings of characters,
 then trying to add them as if they were instead numbers
-can be statically rejected - without the need to execute the program beforehand.
+can be statically rejected---without the need to execute the program beforehand.
 It is clear that a type system cannot be a one-to-one correspondence
 with the untyped language;
 that would not make proving anything easier.
@@ -629,7 +629,7 @@ subject to requirements that will be given below.
 
 Types are constructed out of an uninterpreted base type $\iota$:
 $$ \text{\emph{Type}} \quad A, B \Coloneqq \iota \mid A \to B \mid \Box A $$
-The base type $\iota$ does not stipulate any introduction- nor elimination rules -
+The base type $\iota$ does not stipulate any introduction- nor elimination rules,
 there simply has to be \emph{some} base type,
 or else function- and box types would be unrepresentable.
 Contexts are snoc-lists of types and locks:
@@ -716,7 +716,7 @@ That is to say, it transports $w$ from the future world $\Gamma$ to instead act 
     \label{fig:rewind}}
 \end{figure}
 
-For substitutions - and later environments - we note that both
+For substitutions---and later environments---we note that both
 can be seen as replacement lists of items for each type in a context.
 Thus we choose to define them as concrete instances of a type $\Rpl_F$,\footnote{
 Abbreviation of \emph{R}e\emph{pl}acement, which was chosen as an arbitrary continuation
@@ -821,8 +821,8 @@ Normal and neutral forms are defined mutually as:
   \inferrule{x : \text{Ne} \; \Gamma \; (A \to B) \\ y : \text{Nf} \; \Gamma \; A}{x \; y : \text{Ne} \; \Gamma \; B} \quad
   \inferrule{x : \text{Ne} \; \Delta \; (\Box A) \\ m : \Delta\lhd\Gamma}{\operatorname{unbox} x \; m : \text{Ne} \; \Gamma \; A}
 \end{gather*}
-The normal forms are $\beta$-normal - no $\beta$-reductions are possible -
-and $\eta$-long - all variables are maximally applied and unboxed,
+The normal forms are $\beta$-normal---no $\beta$-reductions are possible---%
+and $\eta$-long---all variables are maximally applied and unboxed,
 as the $\operatorname{ne}$ constructor only permits neutral values of the base type.
 
 As done in \cite{valliappan22}, we choose contexts for worlds,
@@ -846,8 +846,8 @@ i.e.\@ we have
 $wk_A : \Delta \subseteq \Delta' \to \llbracket A \rrbracket_\Delta \to \llbracket A \rrbracket_\Delta'$ and
 $wk_\Gamma : \Delta \subseteq \Delta' \to \llbracket \Gamma \rrbracket_\Delta \to \llbracket \Gamma \rrbracket_\Delta'$.
 
-The definition of evaluation, reification and reflection is given in figure~\ref{fig:nbe}.
-Variable lookup is as for STLC -
+The definitions of evaluation, reification and reflection are given in figure~\ref{fig:nbe}.
+Variable lookup is as for STLC;
 the \textsc{Var} rule does not permit access across lock delimiters in the context,
 thus the $\operatorname{lookup}$ function just has to read
 the variable value from its place in the local environment.
@@ -862,9 +862,8 @@ The normalization function may then be given as
 \end{definition}
 The algorithm can be summarized as follows:
 Evaluation proceeds as for an interpreter,
-except closures take an extra OPE argument -
-this allows conjuring fresh variables under binders
-when reifying functions.
+except closures take an extra OPE argument
+which allows conjuring fresh variables under binders when reifying functions.
 Then the resulting semantic value is reified back to its normal form.
 When reifying a box or function,
 evaluation resumes with the boxed term,
@@ -1153,8 +1152,8 @@ it suffices to show the following lemma:
   $$ \llbracket t \rrbracket \; \gamma = \llbracket t' \rrbracket \; \gamma $$
 \end{lemma}
 The proof is by induction on $t \sim t'$.
-The $\Box\text{-}\eta$ equivalence case -
-where $t'$ is equal to $\operatorname{box} \; (\operatorname{unbox} \; t \; \lhd_\lock)$ -
+The $\Box\text{-}\eta$ equivalence case---%
+where $t'$ is equal to $\operatorname{box} \; (\operatorname{unbox} \; t \; \lhd_\lock)$---%
 follows from naturality of evaluation and $\textit{rewind-}\lhd_\lock$.
 (Though, since box types are interpreted as functions
 of a weakening and modal accessibility relation,
@@ -1230,11 +1229,11 @@ such that for an OPE $\Gamma \subseteq \Delta$,
 $m'$ will relate the target context $\Delta$ and its rewound parallel;
 for \textit{rewind} that information is entirely in the $\operatorname{lock}$ constructor instead.
 
-All the remaining parameters are trivial -
+All the remaining parameters are trivial---%
 it suffices to case split on the possible constructors of ($\lhd_{\lambda_\text{IK}}$)
 and the OPE or $\operatorname{Rpl}$,
 until Agda confirms the parameter holds definitionally in the base cases,
-applying the induction hypothesis elsewhere -
+applying the induction hypothesis elsewhere---%
 with the exception of \textit{rewindPresId} where we need an additional lemma:
 \begin{lemma}
   If $\sigma : \operatorname{Rpl} \Gamma \; \Gamma'$ such that
@@ -1415,8 +1414,8 @@ One possible setback of the way things have been done in this thesis,
 is that the calculus parameter $\lhd_\lock$ imposes too strict a requirement
 on the accessibility relation $(\lhd)$.
 For example, a version of $\lambda_\text{IS4}$
-where $\Delta \lhd \Gamma$ if removing all \lock:s that occur in $\Gamma$ gives $\Delta$ -
-effectively used in \cite{gratzer19} -
+where $\Delta \lhd \Gamma$ if removing all \lock:s that occur in $\Gamma$ gives $\Delta$---%
+effectively used in \cite{gratzer19}---%
 is not an instance of the parametric calculus,
 instead one would have to also allow e.g.\@ the removal of any number of locks.
 That said, the current inclusion of $\lhd_\lock$ does arise naturally
