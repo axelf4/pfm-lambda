@@ -69,15 +69,7 @@ data Ext (🔓? : Set) (Γ : Ctx) : Ctx -> Set where
   snoc : {Γ' : Ctx} {A : Ty} -> Ext 🔓? Γ Γ' -> Ext 🔓? Γ (Γ' , A)
   snoc🔓 : {🔓?} -> {Γ' : Ctx} -> Ext 🔓? Γ Γ' -> Ext 🔓? Γ (Γ' ,🔓)
 
-LFExt = Ext ⊥
-
--- The proof of Ext is irrelevant as long as the contexts match up.
--- (This is the special case of LFExts starting from a lock.)
-LFExtIsProp' : {Γ1 Γ2 Δ : Ctx} -> (m1 : LFExt (Γ1 ,🔓) Δ) (m2 : LFExt (Γ2 ,🔓) Δ)
-  -> Σ (Γ1 ≡ Γ2) λ p -> ≡.subst (λ Γ -> LFExt (Γ ,🔓) Δ) p m1 ≡ m2
-LFExtIsProp' nil nil = refl , refl
-LFExtIsProp' (snoc m1) (snoc m2) with LFExtIsProp' m1 m2
-... | refl , refl = refl , refl
+LFExt = Ext ⊥ -- Lock-free context extension
 
 -- Order-preserving embedding (OPE).
 --
