@@ -769,14 +769,16 @@ are equal up to the conversion.
 
 \begin{figure}
   \centering
-  \begin{align*}
-    \llap{$\beta$ equivalence:}& \quad
-    \inferrule{\Gamma, A \vdash t : B \\ \Gamma \vdash s : A}{(\lambda. \, t) \; s \sim \textit{subst} \; (\textit{id}_s , s) \; t} \quad
-    \inferrule{\Delta, \lock \vdash t : A \\ m : \Delta \lhd \Gamma}{\unbox \; (\operatorname{box} t) \; m \sim \textit{subst} \; (\operatorname{lock} \textit{id}_s \; m) \; t} \\
-    \llap{$\eta$ equivalence:}& \quad
-    \inferrule{\Gamma \vdash t : A \to B}{t \sim \lambda. \, (\textit{wk} \; (\operatorname{weak} \textit{id}_\subseteq) \; t) \; (\operatorname{var} \operatorname{zero})} \quad
-    \inferrule{\Gamma \vdash t : \Box A}{t \sim \operatorname{box} \; (\operatorname{unbox} t \; \lhd_\lock)}
-  \end{align*}
+  \begin{equation*}
+    \begin{array}{@{}rcc@{}}
+      \llap{$\beta$ equivalence:}
+      &\inferrule{\Gamma, A \vdash t : B \\ \Gamma \vdash s : A}{(\lambda. \, t) \; s \sim \textit{subst} \; (\textit{id}_s , s) \; t}
+      &\inferrule{\Delta, \lock \vdash t : A \\ m : \Delta \lhd \Gamma}{\unbox \; (\operatorname{box} t) \; m \sim \textit{subst} \; (\operatorname{lock} \textit{id}_s \; m) \; t} \\
+      \llap{$\eta$ equivalence:}
+      &\inferrule{\Gamma \vdash t : A \to B}{t \sim \lambda. \, (\textit{wk} \; (\operatorname{weak} \textit{id}_\subseteq) \; t) \; (\operatorname{var} \operatorname{zero})}
+      &\inferrule{\Gamma \vdash t : \Box A}{t \sim \operatorname{box} \; (\operatorname{unbox} t \; \lhd_\lock)}
+    \end{array}
+  \end{equation*}
   \caption{Equational theory of $\lambda_\text{PFM}$.
     The rules for lambda abstraction are as for STLC.
     In the $\lambda$-$\beta$-conversion rule,
@@ -1169,12 +1171,13 @@ as summarized in the following lemma:
 \begin{lemma}[Action of evaluation on substituted terms]
   If $\Gamma \vdash t : A$, $\sigma : \operatorname{Sub} \; \Gamma \; \Delta$
   and $\gamma : \operatorname{Env} \; \Delta \; \Xi$, then
-  $$ \llbracket \textit{subst} \; \sigma \; t \rrbracket \; \gamma = \llbracket t \rrbracket \; (\sigma \circ \gamma) $$
+  $$ \llbracket \textit{subst} \; \sigma \; t \rrbracket \; \gamma = \llbracket t \rrbracket \; (\llbracket \sigma \rrbracket \; \gamma) $$
 \end{lemma}
 Here the fact that composition between $\operatorname{Rpl}$:s of different types is defined,
 see definition~\ref{def:composition}, comes into play,
 where we let $\textit{apply} \coloneqq \lambda \gamma \; t.\, \llbracket t \rrbracket \; \gamma$ be evaluation
-in order to compose substitutions and environments.
+in order to compose substitutions and environments,
+and interpret $\llbracket \sigma \rrbracket \; \gamma$ as $\sigma \circ \gamma$.
 After applying the lemma it remains to show
 $$ \llbracket t \rrbracket \; (\operatorname{lock} \; (\textit{wk}_{\widehat\Gamma} \; \textit{id}_\subseteq \; \gamma') \; m') = \llbracket t \rrbracket \; (\operatorname{lock} \; (\textit{id}_s \circ \gamma') \; m') $$
 which follows from
@@ -1358,7 +1361,8 @@ and merge the two \textit{rewind}:s right of $(\circ)$,
 gives the right-hand side.
 
 Note that all $\lambda_\text{IS4}$ parameters have been proven in Agda\footnote{
-See the \texttt{add-is4} branch in the Git repository.},
+See the \href{https://github.com/axelf4/pfm-lambda/tree/add-is4}{\texttt{add-is4}} branch
+in the Git repository.},
 except for $\textit{rewindPresId}$ which thus far only has a proof on paper,
 due to insufficient time.
 
