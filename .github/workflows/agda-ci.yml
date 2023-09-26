@@ -1,6 +1,5 @@
 # 2023-06-15 Andreas Abel, Agda CI + HTML deployment
 name: build
-
 on:
   push:
     branches:
@@ -9,38 +8,28 @@ on:
   pull_request:
     branches:
       - master
-  # schedule:
-  #   # Run always at YYYY-MM-03 03:03am
-  #   - cron: '3 3 3 * *'
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-
       # Checkout to $HOME empties $HOME so we have to do it before we put stuff there.
       - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v22
 
-      - name: Setup Agda
-        uses: wenkokke/setup-agda@latest
-        id:   setup
-        with:
-          agda-version: '2.6.3'
-          agda-stdlib-version: '1.7.1'
-
+      - name: Get Agda version
+        id: get-agda-version
+        run: |
+          echo version="$(nix develop .#agda --command agda --version)" >>$GITHUB_OUTPUT
       - name: Cache build
         uses: actions/cache@v3
         id:   cache
         with:
-          key: ${{ runner.os }}-agda-${{ steps.setup.outputs.agda-version }}
-          path: |
-            _build
-            ~/.agda/libraries.d
+          key: ${{ runner.os }}-${{ steps.get-agda-version.outputs.version }}
+          path: _build
 
       - name: Run Agda
-        run: agda src/Main.agda --html
+        run: nix develop .#agda --command agda src/Main.agda --html
 
       - uses: actions/upload-pages-artifact@v1
         with:
@@ -51,6 +40,7 @@ jobs:
     if: github.ref == 'refs/heads/master'
     # Add a dependency to the build job
     needs: build
+    runs-on: ubuntu-latest
 
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
     permissions:
@@ -63,9 +53,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     # Specify runner + deployment step
-    runs-on: ubuntu-latest
     steps:
-
     - name: Deploy to GitHub Pages
       id:   deployment
       uses: actions/deploy-pages@v2

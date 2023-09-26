@@ -26,8 +26,9 @@
         inherit fitch;
       };
     in {
-      devShells.x86_64-linux.default = pkgs.mkShell {
-        buildInputs = [ agda latex ];
+      devShells.x86_64-linux = {
+        default = pkgs.mkShell { buildInputs = [ agda latex ]; };
+        agda = pkgs.mkShell { buildInputs = [ agda ]; };
       };
 
       packages.x86_64-linux = {
