@@ -192,7 +192,7 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) where
     from-⊆ : {Γ Δ : Ctx} -> Γ ⊆ Δ -> Rpl F Γ Δ
     from-⊆ base = ·
     from-⊆ (weak w) = drop (from-⊆ w)
-    from-⊆ (lift w) = from-⊆ (weak w) , head
+    from-⊆ (lift w) = drop (from-⊆ w) , head
     from-⊆ (lift🔓 w) = lock (from-⊆ w) ◁1
 
     trimNat : {Γ Γ' Δ Δ' : Ctx} (w : Γ' ⊆ Γ) (w' : Δ ⊆ Δ') (σ : Rpl F Γ Δ)
