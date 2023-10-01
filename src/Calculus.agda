@@ -4,7 +4,7 @@ open import Parameters as _ using (Parameters)
 
 module Calculus (params : Parameters) where
 
-open import Agda.Builtin.Sigma using (Σ; fst; snd) renaming (_,_ to infix 20 _,_)
+open import Data.Product using (Σ; proj₁; proj₂) renaming (_,_ to infix 20 _,_)
 open import Level using (0ℓ)
 open import Axiom.Extensionality.Propositional using (Extensionality; implicit-extensionality)
 open import Axiom.UniquenessOfIdentityProofs using (UIP)
@@ -253,13 +253,13 @@ wk-~ w (β t s) = ≡.subst
   (β _ _)
 wk-~ w (η t) rewrite lemmaLiftFresh w t = η (wk w t)
 wk-~ w (□-β t m) = ≡.subst
-  (unbox (box (wk (lift🔓 (snd (snd (rewind-⊆ m w)))) t))
-    (fst (snd (rewind-⊆ m w)))
+  (unbox (box (wk (lift🔓 (proj₂ (proj₂ (rewind-⊆ m w)))) t))
+    (proj₁ (proj₂ (rewind-⊆ m w)))
     ~_)
   (≡.trans
     (≡.trans (≡.sym (cohTrimWk _ _ t))
-      (cong (λ x -> subst (lock x (fst (snd (rewind-⊆ m w)))) t)
-        (≡.trans (Sub.trimIdr (snd (snd (rewind-⊆ m w)))) (≡.sym (wkSubId _)))))
+      (cong (λ x -> subst (lock x (proj₁ (proj₂ (rewind-⊆ m w)))) t)
+        (≡.trans (Sub.trimIdr (proj₂ (proj₂ (rewind-⊆ m w)))) (≡.sym (wkSubId _)))))
     (substNat _ _ t))
   (□-β _ _)
 wk-~ w (□-η t) rewrite rewind-⊆-◁1 w = □-η _
@@ -373,7 +373,7 @@ wkTy' {□ A} w (box' t' t'-nat) = box' (λ w' -> t' (w ● w'))
 private postulate Ty'UIP : {A : Ty} {Γ : Ctx} -> UIP (⟦ A ⟧ty Γ)
 
 ⟶'≡ : {A B : Ty} {Γ : Ctx} {f f' : ⟦ A ⟶ B ⟧ty Γ}
-  -> ({Δ : Ctx} (w : Γ ⊆ Δ) (a' : ⟦ A ⟧ty Δ) -> fst f w a' ≡ fst f' w a')
+  -> ({Δ : Ctx} (w : Γ ⊆ Δ) (a' : ⟦ A ⟧ty Δ) -> proj₁ f w a' ≡ proj₁ f' w a')
   -> f ≡ f'
 ⟶'≡ {f = f} {f'} eq = Σ-≡,≡↔≡ .Inverse.f
   (funexti (funext λ w -> funext λ a' -> eq w a')
@@ -407,7 +407,7 @@ private postulate Ty'UIP : {A : Ty} {Γ : Ctx} -> UIP (⟦ A ⟧ty Γ)
 
 wkTy'Id : {Γ : Ctx} {A : Ty} (t' : ⟦ A ⟧ty Γ) -> wkTy' ⊆.id t' ≡ t'
 wkTy'Id {A = ι} t' = wkNfId t'
-wkTy'Id {A = A ⟶ B} t' = ⟶'≡ λ w a' -> cong1 (fst t') ⊆.idl
+wkTy'Id {A = A ⟶ B} t' = ⟶'≡ λ w a' -> cong1 (proj₁ t') ⊆.idl
 wkTy'Id {A = □ A} t' = □'≡ λ w m -> cong1 (Box'.unbox' t') ⊆.idl
 
 wkTy'Pres-● : {A : Ty} {Γ Δ Ξ : Ctx} (w1 : Γ ⊆ Δ) (w2 : Δ ⊆ Ξ) (t' : ⟦ A ⟧ty Γ)
@@ -476,7 +476,7 @@ lookup x γ = Env.replaceVar γ x
 ⟦ abs t ⟧tm γ = (λ w y' -> ⟦ t ⟧tm (Env.wk w γ , y'))
   , λ w w' y' -> ≡.trans (cong (λ γ -> ⟦ t ⟧tm (γ , wkTy' w' y')) (wkEnvPres-● w w' γ))
     (⟦ t ⟧tm-nat w' (Env.wk w γ , y'))
-⟦ app t s ⟧tm γ = ⟦ t ⟧tm γ .fst ⊆.id (⟦ s ⟧tm γ)
+⟦ app t s ⟧tm γ = ⟦ t ⟧tm γ .proj₁ ⊆.id (⟦ s ⟧tm γ)
 ⟦ box t ⟧tm γ = box' (λ w m -> ⟦ t ⟧tm (lock (Env.wk w γ) m))
   λ w m w' -> ≡.trans (cong (λ γ -> ⟦ t ⟧tm (lock γ _)) (wkEnvPres-● w _ γ))
     (⟦ t ⟧tm-nat w' (lock (Env.wk w γ) m))
@@ -485,8 +485,8 @@ lookup x γ = Env.replaceVar γ x
 
 ⟦ abs t ⟧tm-nat w γ = ⟶'≡ λ w' a' -> cong ⟦ t ⟧tm (cong1 _,_ (≡.sym (wkEnvPres-● w w' γ)))
 ⟦ app t s ⟧tm-nat w γ rewrite ⟦ t ⟧tm-nat w γ | ⟦ s ⟧tm-nat w γ = ≡.trans
-  (cong1 (fst (⟦ t ⟧tm γ)) (≡.trans (⊆.idr) (≡.sym ⊆.idl)))
-  (⟦ t ⟧tm γ .snd ⊆.id w (⟦ s ⟧tm γ))
+  (cong1 (proj₁ (⟦ t ⟧tm γ)) (≡.trans (⊆.idr) (≡.sym ⊆.idl)))
+  (⟦ t ⟧tm γ .proj₂ ⊆.id w (⟦ s ⟧tm γ))
 ⟦ box t ⟧tm-nat w γ = □'≡ λ w' m -> cong ⟦ t ⟧tm (cong1 lock (≡.sym (wkEnvPres-● w w' γ)))
 ⟦ unbox t m ⟧tm-nat w γ rewrite
     rewindWk m γ w {wkF = wkTy'} {head = reflect (var zero)}

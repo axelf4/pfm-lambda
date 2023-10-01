@@ -5,7 +5,7 @@ open import Parameters as _ using (Parameters)
 -- Soundness proof of normalization.
 module Soundness (params : Parameters) where
 
-open import Agda.Builtin.Sigma using (Σ; fst; snd) renaming (_,_ to infix 20 _,_)
+open import Data.Product using (Σ; proj₁; proj₂) renaming (_,_ to infix 20 _,_)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl; cong)
 open ≡.≡-Reasoning
 
@@ -21,7 +21,7 @@ _≈_ : {A : Ty} {Γ : Ctx} -> Γ ⊢ A -> ⟦ A ⟧ty Γ -> Set
 _≈_ {ι} t t' = t ~ ⌜ t' ⌝nf
 _≈_ {A ⟶ B} {Γ} t t' = {Δ : Ctx} -> (w : Γ ⊆ Δ)
   -> {a : Δ ⊢ A} {a' : ⟦ A ⟧ty Δ}
-  -> a ≈ a' -> app (wk w t) a ≈ fst t' w a'
+  -> a ≈ a' -> app (wk w t) a ≈ proj₁ t' w a'
 _≈_ {□ A} {Γ} t t' = {Γ' Δ : Ctx} -> (w : Γ ⊆ Γ') -> (m : Γ' ◁ Δ)
   -> unbox (wk w t) m ≈ Box'.unbox' t' w m
 
@@ -134,14 +134,14 @@ fund (box t) σ≈δ w m = ≡.subst
   where
     σ = Ctx≈.toSub σ≈δ
     ih = fund t (lock (Ctx≈.wk w σ≈δ) m)
-fund (unbox t m) σ≈δ rewrite ≡.sym (wkId (subst (snd (snd (rewind m (Ctx≈.toSub σ≈δ)))) t))
+fund (unbox t m) σ≈δ rewrite ≡.sym (wkId (subst (proj₂ (proj₂ (rewind m (Ctx≈.toSub σ≈δ)))) t))
   = let
     Ξ≡Ξ'1 , (m≡m'1 , σ≡σ') = rewindCommMap A≈A'.t m σ≈δ
     Ξ≡Ξ'2 , (m≡m'2 , δ≡δ') = rewindCommMap A≈A'.t' m σ≈δ
   in ≡.subst₂ (_≈_)
     (dcong₃ (λ _Ξ σ' m' -> unbox (wk ⊆.id (subst σ' t)) m') Ξ≡Ξ'1 σ≡σ' m≡m'1)
     (dcong₃ (λ Ξ δ' m' -> ⟦ t ⟧tm {Ξ} δ' .Box'.unbox' ⊆.id m') Ξ≡Ξ'2 δ≡δ' m≡m'2)
-    (fund t (snd (snd (rewind m σ≈δ))) ⊆.id (fst (snd (rewind m σ≈δ))))
+    (fund t (proj₂ (proj₂ (rewind m σ≈δ))) ⊆.id (proj₁ (proj₂ (rewind m σ≈δ))))
 -- Lookup witnesses for variables in σ≈δ
 fund (var zero) (σ≈δ , record { t≈t' = a≈a' }) = a≈a'
 fund (var (suc x)) (σ≈δ , _) = fund (var x) σ≈δ

@@ -4,7 +4,7 @@ open import Parameters as _ using (Parameters)
 
 module Completeness (params : Parameters) where
 
-open import Agda.Builtin.Sigma using (Σ; fst; snd) renaming (_,_ to infix 20 _,_)
+open import Data.Product using (Σ; proj₁; proj₂) renaming (_,_ to infix 20 _,_)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl; cong; cong₂)
 
 open import Util using (cong1)
@@ -86,7 +86,7 @@ substTm' σ (box t) γ = □'≡ λ w m -> ≡.trans
     (cong (λ x → ⟦ t ⟧tm (lock x m)) (≡.sym (Sub'-nat σ w γ))))
 substTm' σ (unbox t m) γ rewrite let
     _ , (m' , σ') = rewind m σ
-  in substTm' σ' t (snd (snd (rewind m' γ)))
+  in substTm' σ' t (proj₂ (proj₂ (rewind m' γ)))
   = cong (λ (_ , (m'' , γ')) -> ⟦ t ⟧tm γ' .Box'.unbox' ⊆.id m'')
     (≡.sym (rewindPres-∙ m σ γ))
 substTm' (σ , t) (var zero) γ = refl
@@ -99,13 +99,13 @@ evalSound (β t s) γ = ≡.trans
   (cong (λ x -> ⟦ t ⟧tm (x , ⟦ s ⟧tm γ)) (≡.trans (wkEnvId γ) (≡.sym (Sub'-id γ))))
   (≡.sym (substTm' (Sub.id , s) t γ))
 evalSound (η t) γ = ⟶'≡ λ w a' -> ≡.trans
-  (cong1 (⟦ t ⟧tm γ .fst) (≡.sym ⊆.idr))
-  (cong (λ x -> fst x ⊆.id a') (≡.sym (≡.trans
+  (cong1 (⟦ t ⟧tm γ .proj₁) (≡.sym ⊆.idr))
+  (cong (λ x -> proj₁ x ⊆.id a') (≡.sym (≡.trans
     (wkTm' (weak ⊆.id) t (Env.wk w γ , a'))
     (≡.trans (cong ⟦ t ⟧tm (Env.trimIdl (Env.wk w γ)))
       (⟦ t ⟧tm-nat w γ)))))
 evalSound (□-β t m) γ = ≡.trans
-  (cong (λ x → ⟦ t ⟧tm (lock x (fst (snd (rewind m γ)))))
+  (cong (λ x → ⟦ t ⟧tm (lock x (proj₁ (proj₂ (rewind m γ)))))
     (≡.trans (wkEnvId _) (≡.sym (Sub'-id _))))
   (≡.sym (substTm' (lock Sub.id m) t γ))
 evalSound (□-η t) γ = □'≡ λ w m -> ≡.trans
@@ -118,10 +118,10 @@ evalSound (~-sym t'~t) γ = ≡.sym (evalSound t'~t γ)
 evalSound (~-trans t~t' t'~t'') γ = ≡.trans (evalSound t~t' γ) (evalSound t'~t'' γ)
 evalSound (cong-abs t~t') γ = ⟶'≡ (λ w a' -> evalSound t~t' (Env.wk w γ , a'))
 evalSound (cong-app t~t' a~a') γ
-  = cong₂ (λ f -> fst f ⊆.id) (evalSound t~t' γ) (evalSound a~a' γ)
+  = cong₂ (λ f -> proj₁ f ⊆.id) (evalSound t~t' γ) (evalSound a~a' γ)
 evalSound (cong-box t~t') γ = □'≡ (λ w m → evalSound t~t' (lock (Env.wk w γ) m))
 evalSound (cong-unbox {m = m} t~t') γ
-  rewrite evalSound t~t' (snd (snd (rewind m γ))) = refl
+  rewrite evalSound t~t' (proj₂ (proj₂ (rewind m γ))) = refl
 
 complete : {Γ : Ctx} {A : Ty} {t t' : Γ ⊢ A} -> t ~ t' -> nf t ≡ nf t'
 complete t~t' = cong reify (evalSound t~t' Env.id)

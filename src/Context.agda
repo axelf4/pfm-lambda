@@ -2,7 +2,7 @@
 
 module Context where
 
-open import Agda.Builtin.Sigma using (Σ; snd) renaming (_,_ to infix 20 _,_)
+open import Data.Product using (Σ) renaming (_,_ to infix 20 _,_)
 open import Relation.Nullary using (yes; no)
 open import Relation.Binary.Definitions using (DecidableEquality)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl; cong; cong₂)

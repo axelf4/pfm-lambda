@@ -3,7 +3,7 @@
 -- Instantiation of Intuitionistic K.
 module IK where
 
-open import Agda.Builtin.Sigma using (Σ; fst; snd) renaming (_,_ to infix 20 _,_)
+open import Data.Product using (Σ; proj₁; proj₂) renaming (_,_ to infix 20 _,_)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl; cong; cong₂)
 open import Data.Product using (_×_)
 
@@ -76,8 +76,8 @@ rewindPresId {F} (snoc m) {wkF} {head} wkFId = let
     x1 , (x2 , x3) = rewindDrop m id
     y1 , y2 = Σ-≡,≡↔≡ .Inverse.f⁻¹ (rewindPresId m {wkF} {head} wkFId)
     m≡m' = ≡.trans (substTrans x1 y1 x2) (≡.trans (subst-application' snoc y1)
-      (cong snoc (≡.trans (subst-application' fst y1) (cong fst y2))))
-    σ≡σ' = ≡.trans (substTrans x1 y1 x3) (≡.trans (subst-application' snd y1) (cong snd y2))
+      (cong snoc (≡.trans (subst-application' proj₁ y1) (cong proj₁ y2))))
+    σ≡σ' = ≡.trans (substTrans x1 y1 x3) (≡.trans (subst-application' proj₂ y1) (cong proj₂ y2))
   in Σ×-≡,≡,≡→≡ (≡.trans x1 y1 , (m≡m' , σ≡σ'))
   where
     open import Function using (Inverse)
@@ -127,9 +127,9 @@ rewindTrim (snoc m) (lift w) (s , x) {wkF} {head} = rewindTrim m w s {wkF} {head
 
 rewindCommMap : {F G : Ty -> Ctx -> Set} {Γ Γ' Δ : Ctx}
   (f : {A : Ty} {Γ : Ctx} -> F A Γ -> G A Γ) (m : Γ' ◁ Γ) (σ : Rpl F Γ Δ)
-  -> let σ' = Rpl.map f σ in Σ (fst (rewind m σ) ≡ fst (rewind m σ')) λ p ->
-    (≡.subst (_◁ Δ) p (fst (snd (rewind m σ))) ≡ fst (snd (rewind m σ')))
-      × (≡.subst (Rpl G Γ') p (Rpl.map f (snd (snd (rewind m σ))))
-        ≡ snd (snd (rewind m σ')))
+  -> let σ' = Rpl.map f σ in Σ (proj₁ (rewind m σ) ≡ proj₁ (rewind m σ')) λ p ->
+    (≡.subst (_◁ Δ) p (proj₁ (proj₂ (rewind m σ))) ≡ proj₁ (proj₂ (rewind m σ')))
+      × (≡.subst (Rpl G Γ') p (Rpl.map f (proj₂ (proj₂ (rewind m σ))))
+        ≡ proj₂ (proj₂ (rewind m σ')))
 rewindCommMap f nil (lock s m) = refl , (refl , refl)
 rewindCommMap f (snoc m) (s , _) = rewindCommMap f m s

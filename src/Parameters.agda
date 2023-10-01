@@ -1,6 +1,6 @@
 {-# OPTIONS --without-K --safe #-}
 
-open import Agda.Builtin.Sigma using (Σ; fst; snd) renaming (_,_ to infix 20 _,_)
+open import Data.Product using (Σ; proj₁; proj₂) renaming (_,_ to infix 20 _,_)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_)
 open import Data.Product using (_×_)
 
@@ -65,7 +65,7 @@ record Parameters : Set1 where
     -- Rewind commutes with map
     rewindCommMap : {F G : Ty -> Ctx -> Set} {Γ Γ' Δ : Ctx}
       (f : {A : Ty} {Γ : Ctx} -> F A Γ -> G A Γ) (m : Γ' ◁ Γ) (σ : Rpl F Γ Δ)
-      -> let σ' = Rpl.map f σ in Σ (fst (rewind m σ) ≡ fst (rewind m σ')) λ p ->
-        (≡.subst (_◁ Δ) p (fst (snd (rewind m σ))) ≡ fst (snd (rewind m σ')))
-          × (≡.subst (Rpl G Γ') p (Rpl.map f (snd (snd (rewind m σ))))
-            ≡ snd (snd (rewind m σ')))
+      -> let σ' = Rpl.map f σ in Σ (proj₁ (rewind m σ) ≡ proj₁ (rewind m σ')) λ p ->
+        (≡.subst (_◁ Δ) p (proj₁ (proj₂ (rewind m σ))) ≡ proj₁ (proj₂ (rewind m σ')))
+          × (≡.subst (Rpl G Γ') p (Rpl.map f (proj₂ (proj₂ (rewind m σ))))
+            ≡ proj₂ (proj₂ (rewind m σ')))
