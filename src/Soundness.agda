@@ -21,9 +21,9 @@ _≈_ : {A : Ty} {Γ : Ctx} -> Γ ⊢ A -> ⟦ A ⟧ty Γ -> Set
 _≈_ {ι} t t' = t ~ ⌜ t' ⌝nf
 _≈_ {A ⟶ B} {Γ} t t' = {Δ : Ctx} -> (w : Γ ⊆ Δ)
   -> {a : Δ ⊢ A} {a' : ⟦ A ⟧ty Δ}
-  -> a ≈ a' -> app (wk w t) a ≈ proj₁ t' w a'
+  -> a ≈ a' -> app (wk w t) a ≈ t' .⟶'.apply' w a'
 _≈_ {□ A} {Γ} t t' = {Γ' Δ : Ctx} -> (w : Γ ⊆ Γ') -> (m : Γ' ◁ Δ)
-  -> unbox (wk w t) m ≈ Box'.unbox' t' w m
+  -> unbox (wk w t) m ≈ t' .Box'.unbox' w m
 
 -- Transitivity between ~ and ≈ (≈-cons)
 _~◼≈_ : ∀ {A Γ t s} {t' : ⟦ A ⟧ty Γ} -> t ~ s -> s ≈ t' -> t ≈ t'

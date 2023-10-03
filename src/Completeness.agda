@@ -99,8 +99,8 @@ evalSound (β t s) γ = ≡.trans
   (cong (λ x -> ⟦ t ⟧tm (x , ⟦ s ⟧tm γ)) (≡.trans (wkEnvId γ) (≡.sym (Sub'-id γ))))
   (≡.sym (substTm' (Sub.id , s) t γ))
 evalSound (η t) γ = ⟶'≡ λ w a' -> ≡.trans
-  (cong1 (⟦ t ⟧tm γ .proj₁) (≡.sym ⊆.idr))
-  (cong (λ x -> proj₁ x ⊆.id a') (≡.sym (≡.trans
+  (cong1 (⟦ t ⟧tm γ .⟶'.apply') (≡.sym ⊆.idr))
+  (cong (λ x -> ⟶'.apply' x ⊆.id a') (≡.sym (≡.trans
     (wkTm' (weak ⊆.id) t (Env.wk w γ , a'))
     (≡.trans (cong ⟦ t ⟧tm (Env.trimIdl (Env.wk w γ)))
       (⟦ t ⟧tm-nat w γ)))))
@@ -118,7 +118,7 @@ evalSound (~-sym t'~t) γ = ≡.sym (evalSound t'~t γ)
 evalSound (~-trans t~t' t'~t'') γ = ≡.trans (evalSound t~t' γ) (evalSound t'~t'' γ)
 evalSound (cong-abs t~t') γ = ⟶'≡ (λ w a' -> evalSound t~t' (Env.wk w γ , a'))
 evalSound (cong-app t~t' a~a') γ
-  = cong₂ (λ f -> proj₁ f ⊆.id) (evalSound t~t' γ) (evalSound a~a' γ)
+  = cong₂ (λ f -> ⟶'.apply' f ⊆.id) (evalSound t~t' γ) (evalSound a~a' γ)
 evalSound (cong-box t~t') γ = □'≡ (λ w m → evalSound t~t' (lock (Env.wk w γ) m))
 evalSound (cong-unbox {m = m} t~t') γ
   rewrite evalSound t~t' (proj₂ (proj₂ (rewind m γ))) = refl
