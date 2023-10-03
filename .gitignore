@@ -1,4 +1,7 @@
 *.agdai
+/html
+
+/paper/thesis.pdf
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
@@ -191,5 +194,3 @@ svg-inkscape/
 
 # xwatermark package
 *.xwm
-
-/paper/thesis.pdf

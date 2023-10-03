@@ -6,7 +6,6 @@
   outputs = { self, nixpkgs }:
     let
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
-      agda = pkgs.agda.withPackages (ps: with ps; [ standard-library ]);
 
       fitch.pkgs = [ (pkgs.runCommandLocal "fitch"
         {
@@ -25,27 +24,35 @@
           parskip titlesec microtype;
         inherit fitch;
       };
-    in {
-      devShells.x86_64-linux = {
-        default = pkgs.mkShell { buildInputs = [ agda latex ]; };
-        agda = pkgs.mkShell { buildInputs = [ agda ]; };
+
+      agdaPackage = pkgs.agdaPackages.mkDerivation {
+        pname = "pfm-lambda";
+        version = "1.0.0";
+        src = ./.;
+        buildInputs = [ pkgs.agdaPackages.standard-library ];
+        meta = {};
       };
 
-      packages.x86_64-linux = {
-        paper = pkgs.stdenvNoCC.mkDerivation {
-          name = "paper";
-          src = self;
-          sourceRoot = "source/paper";
-          nativeBuildInputs = [ latex ];
-          buildPhase = ''
-            mkdir -p .cache/texmf-var
-            TEXMFVAR=.cache/texmf-var \
-              latexmk -interaction=nonstopmode -lualatex thesis.tex
-          '';
-          installPhase = ''
-            cp thesis.pdf $out
-          '';
-        };
+      paper = pkgs.stdenvNoCC.mkDerivation {
+        name = "paper";
+        src = ./.;
+        sourceRoot = "source/paper";
+        nativeBuildInputs = [ latex ];
+        buildPhase = ''
+          mkdir -p .cache/texmf-var
+          TEXMFVAR=.cache/texmf-var \
+            latexmk -interaction=nonstopmode -lualatex thesis.tex
+        '';
+        installPhase = ''
+          cp thesis.pdf $out
+        '';
+      };
+    in {
+      packages.x86_64-linux = { default = agdaPackage; inherit paper; };
+
+      devShells.x86_64-linux = {
+        default = pkgs.mkShell { inputsFrom = [ agdaPackage paper ]; };
+        agda = pkgs.mkShell { inputsFrom = [ agdaPackage ]; };
       };
     };
 }
