@@ -98,13 +98,16 @@ wkSubId (weak w) = ≡.trans
   (cong (λ x -> Sub.wk (weak x) Sub.id) (≡.sym ⊆.idr))
   (≡.trans (wkSubPres-● w (weak ⊆.id) Sub.id)
     (cong (Sub.wk _) (wkSubId w)))
-wkSubId (lift w) = cong (_, var zero)
-  (≡.trans (≡.sym (wkSubPres-● (weak ⊆.id) (lift w) Sub.id))
-    (≡.trans
-      (cong (λ x -> Sub.wk (weak x) Sub.id)
-        (≡.trans ⊆.idl (≡.sym ⊆.idr)))
-      (≡.trans (wkSubPres-● w (weak ⊆.id) Sub.id)
-        (cong (Sub.wk _) (wkSubId w)))))
+wkSubId (lift w) = cong (_, var zero) (let open ≡.≡-Reasoning in begin
+  Sub.wk (lift w) (Sub.wk (weak ⊆.id) Sub.id)
+  ≡˘⟨ wkSubPres-● (weak ⊆.id) (lift w) Sub.id ⟩
+  Sub.wk (weak ⊆.id ● lift w) Sub.id
+  ≡⟨ cong (λ x -> Sub.wk (weak x) Sub.id) (≡.trans ⊆.idl (≡.sym ⊆.idr)) ⟩
+  Sub.wk (w ● weak ⊆.id) Sub.id
+  ≡⟨ wkSubPres-● w (weak ⊆.id) Sub.id ⟩
+  Sub.wk (weak ⊆.id) (Sub.wk w Sub.id)
+  ≡⟨ cong (Sub.wk _) (wkSubId w) ⟩
+  Sub.wk (weak ⊆.id) (Sub.from-⊆ w) ∎)
 wkSubId (lift🔓 w) rewrite rewind-⊆-◁1 w = cong1 lock (wkSubId w)
 
 substNat : {A : Ty} {Γ Δ Δ' : Ctx} (w : Δ ⊆ Δ') (σ : Sub Γ Δ) (t : Γ ⊢ A)
@@ -439,12 +442,17 @@ reifyNat {A ⟶ B} w (fun' t' t'-nat) = cong abs (≡.trans
     (≡.sym (t'-nat (weak ⊆.id) (lift w) (reflect (var zero))))
     (cong₂ _$_ (cong (t' ∘ weak) (≡.trans ⊆.idl  (≡.sym ⊆.idr)))
       (reflectNat (lift w) (var zero))))))
-reifyNat {□ A} w (box' t' t'-nat) = cong box (≡.trans
-  (reifyNat (lift🔓 w) (t' ⊆.id ◁1))
-  (cong reify (≡.trans
-    (≡.sym (t'-nat ⊆.id ◁1 (lift🔓 w)))
-    (≡.trans (cong (λ (_ , (m' , w')) -> t' (⊆.id ● w') m') (rewind-⊆-◁1 w))
-      (cong1 t' (≡.trans ⊆.idl (≡.sym ⊆.idr)))))))
+reifyNat {□ A} w (box' t' t'-nat) = cong box (begin
+  wkNf (lift🔓 w) (reify (t' ⊆.id ◁1))
+  ≡⟨ reifyNat (lift🔓 w) (t' ⊆.id ◁1) ⟩
+  reify (wkTy' (lift🔓 w) (t' ⊆.id ◁1))
+  ≡˘⟨ cong reify (t'-nat ⊆.id ◁1 (lift🔓 w)) ⟩
+  reify (t' (⊆.id ● proj₂ (proj₂ (rewind-⊆ ◁1 (lift🔓 w)))) (proj₁ (proj₂ (rewind-⊆ ◁1 (lift🔓 w)))))
+  ≡⟨ cong reify (cong (λ (_ , (m' , w')) -> t' (⊆.id ● w') m' ) (rewind-⊆-◁1 w)) ⟩
+  reify (t' (⊆.id ● w) ◁1)
+  ≡⟨ cong reify (cong1 t' (≡.trans ⊆.idl (≡.sym ⊆.idr))) ⟩
+  reify (t' (w ● ⊆.id) ◁1) ∎)
+  where open ≡.≡-Reasoning
 
 reflect {ι} x = ne x
 reflect {A ⟶ B} x = fun' (λ w a' -> reflect (app (wkNe w x) (reify a')))

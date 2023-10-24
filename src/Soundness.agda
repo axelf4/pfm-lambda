@@ -7,7 +7,6 @@ module Soundness (params : Parameters) where
 
 open import Data.Product using (Σ; proj₁; proj₂) renaming (_,_ to infix 20 _,_)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_; refl; cong)
-open ≡.≡-Reasoning
 
 open import Util using (cong1; dcong₃)
 open import Context
@@ -132,6 +131,7 @@ fund (box t) σ≈δ w m = ≡.subst
   (□-β (wk (lift🔓 w) (subst (lock σ ◁1) t)) m)
   ~◼≈ ≡.subst₂ (λ p q -> subst (lock p m) t ≈ ⟦ t ⟧tm (lock q m)) (Ctx≈.toSubWk σ≈δ) (Ctx≈.toEnvWk σ≈δ) ih
   where
+    open ≡.≡-Reasoning
     σ = Ctx≈.toSub σ≈δ
     ih = fund t (lock (Ctx≈.wk w σ≈δ) m)
 fund (unbox t m) σ≈δ rewrite ≡.sym (wkId (subst (proj₂ (proj₂ (rewind m (Ctx≈.toSub σ≈δ)))) t))
