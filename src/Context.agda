@@ -178,11 +178,11 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) where
     trim (lift w) (σ , x) = trim w σ , x
     trim (lift🔓 w) (lock σ m) = lock (trim w σ) m
 
-    drop : {A : Ty} {Γ Δ : Ctx} -> Rpl F Γ Δ -> Rpl F Γ (Δ , A)
-    drop = wk (weak ⊆.id)
+    shift : {A : Ty} {Γ Δ : Ctx} -> Rpl F Γ Δ -> Rpl F Γ (Δ , A)
+    shift = wk (weak ⊆.id)
 
     liftRpl : {A : Ty} {Γ Δ : Ctx} -> Rpl F Γ Δ -> Rpl F (Γ , A) (Δ , A)
-    liftRpl σ = drop σ , head
+    liftRpl σ = shift σ , head
 
     id : {Γ : Ctx} -> Rpl F Γ Γ
     id {·} = ·
@@ -191,8 +191,8 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) where
 
     from-⊆ : {Γ Δ : Ctx} -> Γ ⊆ Δ -> Rpl F Γ Δ
     from-⊆ base = ·
-    from-⊆ (weak w) = drop (from-⊆ w)
-    from-⊆ (lift w) = drop (from-⊆ w) , head
+    from-⊆ (weak w) = shift (from-⊆ w)
+    from-⊆ (lift w) = shift (from-⊆ w) , head
     from-⊆ (lift🔓 w) = lock (from-⊆ w) ◁1
 
     trimNat : {Γ Γ' Δ Δ' : Ctx} (w : Γ' ⊆ Γ) (w' : Δ ⊆ Δ') (σ : Rpl F Γ Δ)
@@ -211,10 +211,10 @@ module Replacement (_◁_ : Ctx -> Ctx -> Set) where
     trimIdr base = refl
     trimIdr (weak w) = ≡.trans
       (≡.sym (trimNat w (weak ⊆.id) id))
-      (cong drop (trimIdr w))
+      (cong shift (trimIdr w))
     trimIdr (lift w) = cong (_, head) (≡.trans
       (≡.sym (trimNat w (weak ⊆.id) id))
-      (cong drop (trimIdr w)))
+      (cong shift (trimIdr w)))
     trimIdr (lift🔓 w) = cong1 lock (trimIdr w)
 
     module _

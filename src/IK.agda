@@ -82,7 +82,7 @@ rewindPresId {F} (snoc m) {wkF} {head} wkFId = let
   where
     open import Function using (Inverse)
     open import Data.Product.Properties using (Σ-≡,≡↔≡)
-    open Rpl.Properties F ◁1 rewind-⊆ wkF head using (wk; drop; id)
+    open Rpl.Properties F ◁1 rewind-⊆ wkF head using (wk; shift; id)
 
     wkId : {Γ Δ : Ctx} {σ : Rpl F Γ Δ} -> wk ⊆.id σ ≡ σ
     wkId {σ = ·} = refl
@@ -90,7 +90,7 @@ rewindPresId {F} (snoc m) {wkF} {head} wkFId = let
     wkId {σ = lock σ m} rewrite rewind-⊆-presId m = cong1 lock wkId
 
     rewindDrop : ∀ {Γ Γ' Δ A} -> (m : Δ ◁ Γ) (σ : Rpl F Γ Γ')
-      -> let Δ'2 , (m'2 , σ'2) = rewind m (drop {A} σ)
+      -> let Δ'2 , (m'2 , σ'2) = rewind m (shift {A} σ)
              Δ'1 , (m'1 , σ'1) = rewind m σ
          in Σ (Δ'2 ≡ Δ'1) λ p ->
            ≡.subst (_◁ _) p m'2 ≡ snoc m'1 × ≡.subst (Rpl F Δ) p σ'2 ≡ σ'1

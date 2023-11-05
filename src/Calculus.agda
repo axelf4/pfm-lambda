@@ -192,7 +192,7 @@ substPres-∙ : {A : Ty} {Γ Γ' Γ'' : Ctx} (σ : Sub Γ Γ') (δ : Sub Γ' Γ'
 substPres-∙ σ δ (abs t) = cong abs (≡.trans
   (cong (λ x -> subst (x , var zero) t)
     (≡.trans (assocSSW σ δ (weak ⊆.id))
-      (≡.trans (cong (σ ∙_) (≡.sym (Sub.trimIdl (Sub.drop δ))))
+      (≡.trans (cong (σ ∙_) (≡.sym (Sub.trimIdl (Sub.shift δ))))
         (≡.sym (assocSWS σ (weak ⊆.id) (Sub.liftRpl δ))))))
   (substPres-∙ (Sub.liftRpl σ) (Sub.liftRpl δ) t))
 substPres-∙ σ δ (app t s) = cong₂ app (substPres-∙ σ δ t) (substPres-∙ σ δ s)

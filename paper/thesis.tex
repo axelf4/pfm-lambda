@@ -1242,15 +1242,15 @@ with the exception of \textit{rewindPresId} where we need an additional lemma:
   If $\sigma : \operatorname{Rpl} \Gamma \; \Gamma'$ such that
   $\textit{wk}_{\operatorname{Rpl}} \; \textit{id}_\subseteq \; \sigma = \sigma$,
   then for all $m : \Delta \lhd_{\lambda_\text{IK}} \Gamma$
-  $$ \textit{rewind} \; m \; (\textit{drop} \; \sigma) = \operatorname{snoc} m' , \sigma' \quad \text{where } m' , \sigma' = \textit{rewind} \; m \; \sigma $$
-  where $\textit{drop} \coloneqq \textit{wk}_{\operatorname{Rpl}} \; (\operatorname{weak} \; \textit{id}_\subseteq)$
+  $$ \textit{rewind} \; m \; (\textit{shift} \; \sigma) = \operatorname{snoc} m' , \sigma' \quad \text{where } m' , \sigma' = \textit{rewind} \; m \; \sigma $$
+  where $\textit{shift} \coloneqq \textit{wk}_{\operatorname{Rpl}} \; (\operatorname{weak} \; \textit{id}_\subseteq)$
   weakens $\sigma$ by appending an additional assumption to the target context $\Gamma'$.
 \end{lemma}
 \begin{proof}
   The $\lambda_\text{IK}$ modal accessibility relation $m$,
   viewed as a context extension from $\Delta$ to $\Gamma$,
   starts with a \lock{} (see the $\operatorname{base}$ constructor).
-  The function \textit{drop} only affects the part of $\sigma$
+  The function \textit{shift} only affects the part of $\sigma$
   pertaining to that right of the lock,
   which will be removed by the \textit{rewind} operation.
 \end{proof}
