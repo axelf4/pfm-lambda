@@ -67,7 +67,7 @@ data _∈_ (A : Ty) : Ctx -> Set where
 data Ext (🔓? : Set) (Γ : Ctx) : Ctx -> Set where
   nil : Ext 🔓? Γ Γ
   snoc : {Γ' : Ctx} {A : Ty} -> Ext 🔓? Γ Γ' -> Ext 🔓? Γ (Γ' , A)
-  snoc🔓 : {🔓?} -> {Γ' : Ctx} -> Ext 🔓? Γ Γ' -> Ext 🔓? Γ (Γ' ,🔓)
+  snoc🔓 : 🔓? -> {Γ' : Ctx} -> Ext 🔓? Γ Γ' -> Ext 🔓? Γ (Γ' ,🔓)
 
 LFExt = Ext ⊥ -- Lock-free context extension
 
