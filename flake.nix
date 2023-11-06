@@ -28,14 +28,14 @@
       agdaPackage = pkgs.agdaPackages.mkDerivation {
         pname = "pfm-lambda";
         version = "1.0.0";
-        src = ./.;
+        src = self;
         buildInputs = [ pkgs.agdaPackages.standard-library ];
         meta = {};
       };
 
       paper = pkgs.stdenvNoCC.mkDerivation {
         name = "paper";
-        src = ./.;
+        src = self;
         sourceRoot = "source/paper";
         nativeBuildInputs = [ latex ];
         buildPhase = ''
