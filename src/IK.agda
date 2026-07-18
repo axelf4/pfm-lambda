@@ -74,7 +74,7 @@ rewindPresId : ∀ {F} {Γ Δ : Ctx} -> (m : Δ ◁ Γ)
 rewindPresId nil _ = refl
 rewindPresId {F} (snoc m) {wkF} {head} wkFId = let
     x1 , (x2 , x3) = rewindDrop m id
-    y1 , y2 = Σ-≡,≡↔≡ .Inverse.f⁻¹ (rewindPresId m {wkF} {head} wkFId)
+    y1 , y2 = Σ-≡,≡↔≡ .Inverse.from (rewindPresId m {wkF} {head} wkFId)
     m≡m' = ≡.trans (substTrans x1 y1 x2) (≡.trans (subst-application' snoc y1)
       (cong snoc (≡.trans (subst-application' proj₁ y1) (cong proj₁ y2))))
     σ≡σ' = ≡.trans (substTrans x1 y1 x3) (≡.trans (subst-application' proj₂ y1) (cong proj₂ y2))

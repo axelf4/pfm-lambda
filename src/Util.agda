@@ -28,6 +28,6 @@ module _ {a p q} {A : Set a} {P : A -> Set p} {Q : A -> Set q}
 Σ×-≡,≡,≡→≡ : {A : Set} {B B' : A -> Set} {p₁@(a₁ , b₁ , b₁') p₂@(a₂ , b₂ , b₂') : Σ A λ a -> B a × B' a}
   -> (Σ (a₁ ≡ a₂) λ p -> subst B p b₁ ≡ b₂ × subst B' p b₁' ≡ b₂')
   -> p₁ ≡ p₂
-Σ×-≡,≡,≡→≡ {A} {_B} {_B'} {p₁} {p₂} (p , q , q') = Σ-≡,≡↔≡ .Inverse.f (p
-  , ×-≡,≡↔≡ .Inverse.f (trans (sym (subst-application' proj₁ p)) q
+Σ×-≡,≡,≡→≡ {A} {_B} {_B'} {p₁} {p₂} (p , q , q') = Σ-≡,≡↔≡ .Inverse.to (p
+  , ×-≡,≡↔≡ .Inverse.to (trans (sym (subst-application' proj₁ p)) q
   , trans (sym (subst-application' proj₂ p)) q'))
